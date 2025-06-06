@@ -65,6 +65,8 @@ impl SangerFilename for SangonSangerFilename {
 
 #[cfg(test)]
 mod test {
+    use time::macros::datetime;
+
     use super::*;
 
     #[test]
@@ -77,5 +79,14 @@ mod test {
         assert_eq!(sangon_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(sangon_sanger_fn.get_template_name(), template_name);
         assert_eq!(sangon_sanger_fn.get_primer_name(), primer_name);
+    }
+
+    #[test]
+    fn test_sangon_standardized_name() {
+        let filename = "0001_31225060307072_(TXPCR)_[SP1]";
+        let sangon_sanger_fn: SangonSangerFilename = filename.into();
+        let date = datetime!(2025-06-01 00:00:00 +8);
+        let standardized_name = sangon_sanger_fn.get_standardized_name(Some(date.date()));
+        assert_eq!(standardized_name, "250601.TXPCR.SP1");
     }
 }

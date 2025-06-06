@@ -62,6 +62,7 @@ impl SangerFilename for RuibioSangerFilename {
 #[cfg(test)]
 mod test {
     use super::*;
+    use time::macros::datetime;
     #[test]
     fn test_ruibio_extraction() {
         let filename = "K528-1.C1.34781340.B08";
@@ -72,5 +73,13 @@ mod test {
         assert_eq!(ruibio_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(ruibio_sanger_fn.get_template_name(), template_name);
         assert_eq!(ruibio_sanger_fn.get_primer_name(), primer_name);
+    }
+    #[test]
+    fn test_ruibio_standardized_name() {
+        let filename = "K528-1.C1.34781340.B08";
+        let ruibio_sanger_fn: RuibioSangerFilename = filename.into();
+        let date = datetime!(2025-12-06 00:00:00 +8);
+        let standardized_name = ruibio_sanger_fn.get_standardized_name(Some(date.date()));
+        assert_eq!(standardized_name, "251206.K528-1.C1");
     }
 }
