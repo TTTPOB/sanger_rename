@@ -47,10 +47,21 @@ impl Display for VendorSelection {
 
 pub struct App {
     pub should_quit: bool,
-    pub selected_vendor: Option<VendorSelection>,
-    pub highlighted: usize,
+    vendor_selection_state: VendorSelectionState,
     pub quit_without_selection: bool,
     pub stage: Stage,
+}
+struct VendorSelectionState {
+    highlighted: usize,
+    selected_vendor: Option<VendorSelection>,
+}
+impl VendorSelectionState {
+    pub fn new() -> Self {
+        Self {
+            highlighted: 0,
+            selected_vendor: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,8 +76,7 @@ impl Default for App {
     fn default() -> App {
         App {
             should_quit: false,
-            selected_vendor: None,
-            highlighted: 0,
+            vendor_selection_state: VendorSelectionState::new(),
             quit_without_selection: false,
             stage: Stage::VendorSelection,
         }
@@ -77,27 +87,43 @@ impl App {
     pub fn new() -> App {
         App::default()
     }
+    pub fn get_selected_vendor(&self) -> Option<VendorSelection> {
+        self.vendor_selection_state.selected_vendor
+    }
+    pub fn set_vendor_highlighted(&mut self, index: usize) {
+        if index < VendorSelection::all().len() {
+            self.vendor_selection_state.highlighted = index;
+        }
+    }
+    pub fn get_vendor_highlighted(&self) -> usize {
+        self.vendor_selection_state.highlighted
+    }
+    pub fn set_selected_vendor(&mut self, vendor: Option<VendorSelection>) {
+        self.vendor_selection_state.selected_vendor = vendor;
+    }
     pub fn handle_key(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
         }
         match key.code {
             KeyCode::Left => {
-                if self.highlighted == 0 {
-                    self.highlighted = 2; // Wrap around to the last vendor
+                if self.get_vendor_highlighted() == 0 {
+                    self.set_vendor_highlighted(VendorSelection::all().len() - 1); // Wrap around to the last vendor
                 } else {
-                    self.highlighted -= 1;
+                    self.set_vendor_highlighted(self.get_vendor_highlighted() - 1);
                 }
             }
             KeyCode::Right => {
-                if self.highlighted == 2 {
-                    self.highlighted = 0; // Wrap around to the first vendor
+                if self.get_vendor_highlighted() == 2 {
+                    self.set_vendor_highlighted(0); // Wrap around to the first vendor
                 } else {
-                    self.highlighted += 1;
+                    self.set_vendor_highlighted(self.get_vendor_highlighted() + 1);
                 }
             }
             KeyCode::Enter => {
-                self.selected_vendor = VendorSelection::from_index(self.highlighted);
+                self.set_selected_vendor(VendorSelection::from_index(
+                    self.get_vendor_highlighted(),
+                ));
             }
             KeyCode::Esc | KeyCode::Char('q') => {
                 self.should_quit = true;
@@ -122,7 +148,7 @@ impl App {
         let [header_area, main_area, footer_area] = vertical.areas(terminal.get_frame().area());
         let header_text = format!(
             "Selected: {}",
-            VendorSelection::from_index(self.highlighted)
+            VendorSelection::from_index(self.get_vendor_highlighted())
                 .map_or("None".to_string(), |v| v.to_string())
         );
         let header_widget = Paragraph::new(Line::from(vec![Span::styled(
@@ -133,7 +159,7 @@ impl App {
         terminal.draw(|f| {
             let areas = [left, middle, right];
             for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
-                let is_highlighted = i == self.highlighted;
+                let is_highlighted = i == self.get_vendor_highlighted();
                 let style = if is_highlighted {
                     Style::default()
                         .fg(Color::Yellow)

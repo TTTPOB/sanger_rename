@@ -24,6 +24,6 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let mut app = App::new();
     app.run()?;
-    println!("Selected vendor: {:?}", app.selected_vendor);
+    println!("Selected vendor: {:?}", app.get_selected_vendor());
     Ok(())
 }
