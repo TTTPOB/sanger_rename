@@ -14,9 +14,11 @@ use ratatui::{
     text::{Line, Span},
     widgets::{self, Block, Borders, List, Paragraph},
 };
-use std::io;
 use std::time::Duration;
+use std::{fmt::Display, io};
+use strum::{EnumIter, IntoEnumIterator};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
 pub enum VendorSelection {
     Sangon,
     Ruibio,
@@ -24,19 +26,20 @@ pub enum VendorSelection {
 }
 
 impl VendorSelection {
-    pub fn as_str(&self) -> &str {
-        match self {
-            VendorSelection::Sangon => "Sangon",
-            VendorSelection::Ruibio => "Ruibio",
-            VendorSelection::Genewiz => "Genewiz",
-        }
+    pub fn all() -> Vec<VendorSelection> {
+        VendorSelection::iter().collect()
     }
     pub fn from_index(index: usize) -> Option<VendorSelection> {
-        match index {
-            0 => Some(VendorSelection::Sangon),
-            1 => Some(VendorSelection::Ruibio),
-            2 => Some(VendorSelection::Genewiz),
-            _ => None,
+        Self::all().get(index).copied()
+    }
+}
+
+impl Display for VendorSelection {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            VendorSelection::Sangon => write!(f, "Sangon"),
+            VendorSelection::Ruibio => write!(f, "Ruibio"),
+            VendorSelection::Genewiz => write!(f, "Genewiz"),
         }
     }
 }
@@ -93,7 +96,10 @@ impl App {
     }
     pub fn vendor_selection_page(&mut self) -> anyhow::Result<()> {
         let mut terminal = ratatui::init();
-        let vds = ["Sangon", "Ruibio", "Genewiz"];
+        let vds = VendorSelection::all()
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>();
         let vertical = Layout::vertical([
             Constraint::Percentage(10),
             Constraint::Percentage(80),
@@ -105,7 +111,7 @@ impl App {
             let header_text = format!(
                 "Selected: {}",
                 VendorSelection::from_index(self.highlighted)
-                    .map_or("None".to_string(), |v| v.as_str().to_string())
+                    .map_or("None".to_string(), |v| v.to_string())
             );
             let header_widget = Paragraph::new(Line::from(vec![Span::styled(
                 header_text,
@@ -126,14 +132,14 @@ impl App {
                     };
                     let block = Block::default()
                         .borders(Borders::ALL)
-                        .title(Span::styled(*title, style))
+                        .title(Span::styled(title.clone(), style))
                         .border_style(style);
                     let vertical_layout = Layout::vertical([
                         Constraint::Min(0),
                         Constraint::Length(5),
                         Constraint::Min(0),
                     ]);
-                    let block_content = Paragraph::new(*title)
+                    let block_content = Paragraph::new(title.clone())
                         .style(style)
                         .alignment(Alignment::Center)
                         .block(block);
