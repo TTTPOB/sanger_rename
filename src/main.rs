@@ -23,7 +23,7 @@ struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let mut app = App::new();
-    app.vendor_selection_page()?;
+    app.run()?;
     println!("Selected vendor: {:?}", app.selected_vendor);
     Ok(())
 }

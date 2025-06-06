@@ -14,6 +14,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{self, Block, Borders, List, Paragraph},
 };
+use std::io::Stdout;
 use std::time::Duration;
 use std::{fmt::Display, io};
 use strum::{EnumIter, IntoEnumIterator};
@@ -49,6 +50,15 @@ pub struct App {
     pub selected_vendor: Option<VendorSelection>,
     pub highlighted: usize,
     pub quit_without_selection: bool,
+    pub stage: Stage,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Stage {
+    VendorSelection,
+    PrimerRename,
+    DateSelection,
+    RenamePreview,
 }
 
 impl Default for App {
@@ -58,6 +68,7 @@ impl Default for App {
             selected_vendor: None,
             highlighted: 0,
             quit_without_selection: false,
+            stage: Stage::VendorSelection,
         }
     }
 }
@@ -94,8 +105,10 @@ impl App {
             _ => {}
         }
     }
-    pub fn vendor_selection_page(&mut self) -> anyhow::Result<()> {
-        let mut terminal = ratatui::init();
+    pub fn vendor_selection_page(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> anyhow::Result<()> {
         let vds = VendorSelection::all()
             .iter()
             .map(|v| v.to_string())
@@ -155,6 +168,11 @@ impl App {
             }
         }
         ratatui::restore();
+        Ok(())
+    }
+    pub fn run(&mut self) -> anyhow::Result<()> {
+        let mut term = ratatui::init();
+        self.vendor_selection_page(&mut term)?;
         Ok(())
     }
 }
