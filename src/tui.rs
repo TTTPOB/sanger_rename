@@ -1,6 +1,9 @@
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{
+        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind,
+    },
     execute,
+    style::Stylize,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
@@ -9,7 +12,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{self, Block, Borders, List, Paragraph},
 };
 use std::io;
 use std::time::Duration;
@@ -26,6 +29,14 @@ impl VendorSelection {
             VendorSelection::Sangon => "Sangon",
             VendorSelection::Ruibio => "Ruibio",
             VendorSelection::Genewiz => "Genewiz",
+        }
+    }
+    pub fn from_index(index: usize) -> Option<VendorSelection> {
+        match index {
+            0 => Some(VendorSelection::Sangon),
+            1 => Some(VendorSelection::Ruibio),
+            2 => Some(VendorSelection::Genewiz),
+            _ => None,
         }
     }
 }
@@ -52,206 +63,92 @@ impl App {
     pub fn new() -> App {
         App::default()
     }
-    pub fn on_key(&mut self, key: KeyCode) {
-        match key {
-            KeyCode::Char('q') | KeyCode::Esc => {
-                self.quit_without_selection = true;
-                self.should_quit = true;
-            }
-            KeyCode::Char('s') | KeyCode::Char('S') => {
-                self.selected_vendor = Some(VendorSelection::Sangon);
-                self.should_quit = true;
-            }
-            KeyCode::Char('r') | KeyCode::Char('R') => {
-                self.selected_vendor = Some(VendorSelection::Ruibio);
-                self.should_quit = true;
-            }
-            KeyCode::Char('g') | KeyCode::Char('G') => {
-                self.selected_vendor = Some(VendorSelection::Genewiz);
-                self.should_quit = true;
-            }
-            KeyCode::Up => {
-                if self.highlighted > 0 {
+    pub fn handle_key(&mut self, key: KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match key.code {
+            KeyCode::Left => {
+                if self.highlighted == 0 {
+                    self.highlighted = 2; // Wrap around to the last vendor
+                } else {
                     self.highlighted -= 1;
                 }
             }
-            KeyCode::Down => {
-                if self.highlighted < 2 {
+            KeyCode::Right => {
+                if self.highlighted == 2 {
+                    self.highlighted = 0; // Wrap around to the first vendor
+                } else {
                     self.highlighted += 1;
                 }
             }
             KeyCode::Enter => {
-                match self.highlighted {
-                    0 => self.selected_vendor = Some(VendorSelection::Sangon),
-                    1 => self.selected_vendor = Some(VendorSelection::Ruibio),
-                    2 => self.selected_vendor = Some(VendorSelection::Genewiz),
-                    _ => {}
-                }
+                self.selected_vendor = VendorSelection::from_index(self.highlighted);
+            }
+            KeyCode::Esc | KeyCode::Char('q') => {
                 self.should_quit = true;
             }
             _ => {}
         }
     }
-}
-
-pub fn ui(f: &mut Frame, app: &App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(2)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(0),
-            Constraint::Length(3),
-        ])
-        .split(f.area());
-
-    // Title
-    let title = Paragraph::new("Sanger Rename Tool")
-        .style(
-            Style::default()
-                .fg(Color::Cyan)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(title, chunks[0]);
-
-    // Vendor selection area
-    let vendor_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .margin(1)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Length(8),
-            Constraint::Length(8),
-            Constraint::Length(8),
-        ])
-        .split(chunks[1]);
-
-    // Subtitle
-    let subtitle = Paragraph::new("Choose the vendor:")
-        .style(
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD),
-        )
-        .alignment(Alignment::Center);
-    f.render_widget(subtitle, vendor_chunks[0]);
-
-    let vendors = [
-        VendorSelection::Sangon,
-        VendorSelection::Ruibio,
-        VendorSelection::Genewiz,
-    ];
-    let keys = ['S', 'R', 'G'];
-
-    for (i, (vendor, key)) in vendors.iter().zip(keys.iter()).enumerate() {
-        let is_highlighted = i == app.highlighted;
-        let style = if is_highlighted {
-            Style::default()
-                .fg(Color::Black)
-                .bg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::White)
-        };
-
-        let border_style = if is_highlighted {
-            Style::default().fg(Color::Yellow)
-        } else {
-            Style::default().fg(Color::Gray)
-        };
-
-        let content = vec![
-            Line::from(vec![Span::styled(
-                format!("{}", vendor.as_str()),
-                Style::default().add_modifier(Modifier::BOLD),
-            )]),
-            Line::from(""),
-            Line::from(vec![
-                Span::raw("Press '"),
-                Span::styled(
-                    format!("{}", key),
-                    Style::default()
-                        .fg(Color::Green)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::raw("' to select"),
-            ]),
-            Line::from(""),
-            Line::from(vec![Span::raw("↑/↓ to navigate, Enter to select")]),
-        ];
-
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .border_style(border_style)
-            .title(format!(" {} ", vendor.as_str()));
-
-        let paragraph = Paragraph::new(content)
-            .style(style)
-            .alignment(Alignment::Center)
-            .block(block);
-
-        f.render_widget(paragraph, vendor_chunks[i + 1]);
-    }
-
-    // Instructions
-    let instructions = Paragraph::new("Press 'Q' or 'Esc' to quit")
-        .style(Style::default().fg(Color::Gray))
-        .alignment(Alignment::Center)
-        .block(Block::default().borders(Borders::ALL));
-    f.render_widget(instructions, chunks[2]);
-}
-
-pub fn run_tui() -> Result<Option<VendorSelection>, Box<dyn std::error::Error>> {
-    // Setup terminal
-    enable_raw_mode()?;
-    let mut stdout = io::stdout();
-    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
-
-    // Create app and run it
-    let mut app = App::new();
-    let res = run_app(&mut terminal, &mut app);
-
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-        DisableMouseCapture
-    )?;
-    terminal.show_cursor()?;
-    match res {
-        Ok(_) => {
-            if app.quit_without_selection {
-                Ok(None)
-            } else {
-                Ok(app.selected_vendor)
+    pub fn vendor_selection_page(&mut self) -> anyhow::Result<()> {
+        let mut terminal = ratatui::init();
+        let vds = ["Sangon", "Ruibio", "Genewiz"];
+        let vertical = Layout::vertical([
+            Constraint::Percentage(10),
+            Constraint::Percentage(80),
+            Constraint::Percentage(10),
+        ]);
+        let horizontal = Layout::horizontal([Constraint::Percentage(33); 3]).spacing(1);
+        loop {
+            let [header_area, main_area, footer_area] = vertical.areas(terminal.get_frame().area());
+            let header_text = format!(
+                "Selected: {}",
+                VendorSelection::from_index(self.highlighted)
+                    .map_or("None".to_string(), |v| v.as_str().to_string())
+            );
+            let header_widget = Paragraph::new(Line::from(vec![Span::styled(
+                header_text,
+                Style::default().fg(Color::Cyan),
+            )]));
+            let [left, middle, right] = horizontal.areas(main_area);
+            terminal.draw(|f| {
+                let areas = [left, middle, right];
+                for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
+                    let is_highlighted = i == self.highlighted;
+                    let style = if is_highlighted {
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .bg(Color::DarkGray)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default()
+                    };
+                    let block = Block::default()
+                        .borders(Borders::ALL)
+                        .title(Span::styled(*title, style))
+                        .border_style(style);
+                    let vertical_layout = Layout::vertical([
+                        Constraint::Min(0),
+                        Constraint::Length(5),
+                        Constraint::Min(0),
+                    ]);
+                    let block_content = Paragraph::new(*title)
+                        .style(style)
+                        .alignment(Alignment::Center)
+                        .block(block);
+                    f.render_widget(block_content, *area);
+                }
+                f.render_widget(header_widget, header_area);
+            })?;
+            if let Some(ev) = event::read()?.as_key_press_event() {
+                self.handle_key(ev);
+            };
+            if self.should_quit {
+                break;
             }
         }
-        Err(err) => Err(Box::new(err)),
+        ratatui::restore();
+        Ok(())
     }
-}
-
-fn run_app(
-    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
-    app: &mut App,
-) -> io::Result<()> {
-    loop {
-        terminal.draw(|f| ui(f, app))?;
-
-        // Poll for events with a timeout to prevent rapid redraws
-        if event::poll(Duration::from_millis(100))? {
-            if let Event::Key(key) = event::read()? {
-                app.on_key(key.code);
-            }
-        }
-
-        if app.should_quit {
-            break;
-        }
-    }
-    Ok(())
 }
