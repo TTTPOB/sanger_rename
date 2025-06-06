@@ -12,6 +12,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use std::io;
+use std::time::Duration;
 
 pub enum VendorSelection {
     Sangon,
@@ -33,6 +34,7 @@ pub struct App {
     pub should_quit: bool,
     pub selected_vendor: Option<VendorSelection>,
     pub highlighted: usize,
+    pub quit_without_selection: bool,
 }
 
 impl Default for App {
@@ -41,6 +43,7 @@ impl Default for App {
             should_quit: false,
             selected_vendor: None,
             highlighted: 0,
+            quit_without_selection: false,
         }
     }
 }
@@ -49,10 +52,10 @@ impl App {
     pub fn new() -> App {
         App::default()
     }
-
     pub fn on_key(&mut self, key: KeyCode) {
         match key {
             KeyCode::Char('q') | KeyCode::Esc => {
+                self.quit_without_selection = true;
                 self.should_quit = true;
             }
             KeyCode::Char('s') | KeyCode::Char('S') => {
@@ -220,9 +223,14 @@ pub fn run_tui() -> Result<Option<VendorSelection>, Box<dyn std::error::Error>> 
         DisableMouseCapture
     )?;
     terminal.show_cursor()?;
-
     match res {
-        Ok(_) => Ok(app.selected_vendor),
+        Ok(_) => {
+            if app.quit_without_selection {
+                Ok(None)
+            } else {
+                Ok(app.selected_vendor)
+            }
+        }
         Err(err) => Err(Box::new(err)),
     }
 }
@@ -234,8 +242,11 @@ fn run_app(
     loop {
         terminal.draw(|f| ui(f, app))?;
 
-        if let Event::Key(key) = event::read()? {
-            app.on_key(key.code);
+        // Poll for events with a timeout to prevent rapid redraws
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                app.on_key(key.code);
+            }
         }
 
         if app.should_quit {
