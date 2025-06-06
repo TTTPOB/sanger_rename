@@ -1,4 +1,3 @@
-use crate::Vendor;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -14,9 +13,25 @@ use ratatui::{
 };
 use std::io;
 
+pub enum VendorSelection {
+    Sangon,
+    Ruibio,
+    Genewiz,
+}
+
+impl VendorSelection {
+    pub fn as_str(&self) -> &str {
+        match self {
+            VendorSelection::Sangon => "Sangon",
+            VendorSelection::Ruibio => "Ruibio",
+            VendorSelection::Genewiz => "Genewiz",
+        }
+    }
+}
+
 pub struct App {
     pub should_quit: bool,
-    pub selected_vendor: Option<Vendor>,
+    pub selected_vendor: Option<VendorSelection>,
     pub highlighted: usize,
 }
 
@@ -41,15 +56,15 @@ impl App {
                 self.should_quit = true;
             }
             KeyCode::Char('s') | KeyCode::Char('S') => {
-                self.selected_vendor = Some(Vendor::Sangon);
+                self.selected_vendor = Some(VendorSelection::Sangon);
                 self.should_quit = true;
             }
             KeyCode::Char('r') | KeyCode::Char('R') => {
-                self.selected_vendor = Some(Vendor::Ruibio);
+                self.selected_vendor = Some(VendorSelection::Ruibio);
                 self.should_quit = true;
             }
             KeyCode::Char('g') | KeyCode::Char('G') => {
-                self.selected_vendor = Some(Vendor::Genewiz);
+                self.selected_vendor = Some(VendorSelection::Genewiz);
                 self.should_quit = true;
             }
             KeyCode::Up => {
@@ -64,9 +79,9 @@ impl App {
             }
             KeyCode::Enter => {
                 match self.highlighted {
-                    0 => self.selected_vendor = Some(Vendor::Sangon),
-                    1 => self.selected_vendor = Some(Vendor::Ruibio),
-                    2 => self.selected_vendor = Some(Vendor::Genewiz),
+                    0 => self.selected_vendor = Some(VendorSelection::Sangon),
+                    1 => self.selected_vendor = Some(VendorSelection::Ruibio),
+                    2 => self.selected_vendor = Some(VendorSelection::Genewiz),
                     _ => {}
                 }
                 self.should_quit = true;
@@ -120,7 +135,11 @@ pub fn ui(f: &mut Frame, app: &App) {
         .alignment(Alignment::Center);
     f.render_widget(subtitle, vendor_chunks[0]);
 
-    let vendors = [Vendor::Sangon, Vendor::Ruibio, Vendor::Genewiz];
+    let vendors = [
+        VendorSelection::Sangon,
+        VendorSelection::Ruibio,
+        VendorSelection::Genewiz,
+    ];
     let keys = ['S', 'R', 'G'];
 
     for (i, (vendor, key)) in vendors.iter().zip(keys.iter()).enumerate() {
@@ -181,7 +200,7 @@ pub fn ui(f: &mut Frame, app: &App) {
     f.render_widget(instructions, chunks[2]);
 }
 
-pub fn run_tui() -> Result<Option<Vendor>, Box<dyn std::error::Error>> {
+pub fn run_tui() -> Result<Option<VendorSelection>, Box<dyn std::error::Error>> {
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
