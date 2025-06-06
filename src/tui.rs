@@ -172,11 +172,6 @@ impl App {
                     .borders(Borders::ALL)
                     .title(Span::styled(title.clone(), style))
                     .border_style(style);
-                let vertical_layout = Layout::vertical([
-                    Constraint::Min(0),
-                    Constraint::Length(5),
-                    Constraint::Min(0),
-                ]);
                 let block_content = Paragraph::new(title.clone())
                     .style(style)
                     .alignment(Alignment::Center)
