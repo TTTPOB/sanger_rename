@@ -101,7 +101,7 @@ impl App {
     pub fn set_selected_vendor(&mut self, vendor: Option<VendorSelection>) {
         self.vendor_selection_state.selected_vendor = vendor;
     }
-    pub fn handle_key(&mut self, key: KeyEvent) {
+    pub fn handle_key_vendor_selection(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
         }
@@ -114,7 +114,7 @@ impl App {
                 }
             }
             KeyCode::Right => {
-                if self.get_vendor_highlighted() == 2 {
+                if self.get_vendor_highlighted() == VendorSelection::all().len() - 1 {
                     self.set_vendor_highlighted(0); // Wrap around to the first vendor
                 } else {
                     self.set_vendor_highlighted(self.get_vendor_highlighted() + 1);
@@ -129,6 +129,23 @@ impl App {
                 self.should_quit = true;
             }
             _ => {}
+        }
+    }
+    pub fn handle_key(&mut self, key: KeyEvent) {
+        if key.kind != KeyEventKind::Press {
+            return;
+        }
+        match self.stage {
+            Stage::VendorSelection => self.handle_key_vendor_selection(key),
+            Stage::PrimerRename => {
+                // Handle keys for primer rename stage
+            }
+            Stage::DateSelection => {
+                // Handle keys for date selection stage
+            }
+            Stage::RenamePreview => {
+                // Handle keys for rename preview stage
+            }
         }
     }
     pub fn vendor_selection_page(
