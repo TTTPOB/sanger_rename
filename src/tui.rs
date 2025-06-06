@@ -119,60 +119,95 @@ impl App {
             Constraint::Percentage(10),
         ]);
         let horizontal = Layout::horizontal([Constraint::Percentage(33); 3]).spacing(1);
+        let [header_area, main_area, footer_area] = vertical.areas(terminal.get_frame().area());
+        let header_text = format!(
+            "Selected: {}",
+            VendorSelection::from_index(self.highlighted)
+                .map_or("None".to_string(), |v| v.to_string())
+        );
+        let header_widget = Paragraph::new(Line::from(vec![Span::styled(
+            header_text,
+            Style::default().fg(Color::Cyan),
+        )]));
+        let [left, middle, right] = horizontal.areas(main_area);
+        terminal.draw(|f| {
+            let areas = [left, middle, right];
+            for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
+                let is_highlighted = i == self.highlighted;
+                let style = if is_highlighted {
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .bg(Color::DarkGray)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+                let block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(title.clone(), style))
+                    .border_style(style);
+                let vertical_layout = Layout::vertical([
+                    Constraint::Min(0),
+                    Constraint::Length(5),
+                    Constraint::Min(0),
+                ]);
+                let block_content = Paragraph::new(title.clone())
+                    .style(style)
+                    .alignment(Alignment::Center)
+                    .block(block);
+                f.render_widget(block_content, *area);
+            }
+            f.render_widget(header_widget, header_area);
+        })?;
+        Ok(())
+    }
+    pub fn primer_rename_page(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> anyhow::Result<()> {
+        // Placeholder for primer rename page logic
+        Ok(())
+    }
+    pub fn date_selection_page(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> anyhow::Result<()> {
+        // Placeholder for date selection page logic
+        Ok(())
+    }
+    pub fn rename_preview_page(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> anyhow::Result<()> {
+        // Placeholder for rename preview page logic
+        Ok(())
+    }
+
+    pub fn run(&mut self) -> anyhow::Result<()> {
+        let mut term = ratatui::init();
         loop {
-            let [header_area, main_area, footer_area] = vertical.areas(terminal.get_frame().area());
-            let header_text = format!(
-                "Selected: {}",
-                VendorSelection::from_index(self.highlighted)
-                    .map_or("None".to_string(), |v| v.to_string())
-            );
-            let header_widget = Paragraph::new(Line::from(vec![Span::styled(
-                header_text,
-                Style::default().fg(Color::Cyan),
-            )]));
-            let [left, middle, right] = horizontal.areas(main_area);
-            terminal.draw(|f| {
-                let areas = [left, middle, right];
-                for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
-                    let is_highlighted = i == self.highlighted;
-                    let style = if is_highlighted {
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .bg(Color::DarkGray)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default()
-                    };
-                    let block = Block::default()
-                        .borders(Borders::ALL)
-                        .title(Span::styled(title.clone(), style))
-                        .border_style(style);
-                    let vertical_layout = Layout::vertical([
-                        Constraint::Min(0),
-                        Constraint::Length(5),
-                        Constraint::Min(0),
-                    ]);
-                    let block_content = Paragraph::new(title.clone())
-                        .style(style)
-                        .alignment(Alignment::Center)
-                        .block(block);
-                    f.render_widget(block_content, *area);
+            match self.stage {
+                Stage::VendorSelection => {
+                    self.vendor_selection_page(&mut term)?;
                 }
-                f.render_widget(header_widget, header_area);
-            })?;
+                Stage::PrimerRename => {
+                    self.primer_rename_page(&mut term)?;
+                }
+                Stage::DateSelection => {
+                    self.date_selection_page(&mut term)?;
+                }
+                Stage::RenamePreview => {
+                    self.rename_preview_page(&mut term)?;
+                }
+            }
             if let Some(ev) = event::read()?.as_key_press_event() {
                 self.handle_key(ev);
-            };
+            }
             if self.should_quit {
                 break;
             }
         }
         ratatui::restore();
-        Ok(())
-    }
-    pub fn run(&mut self) -> anyhow::Result<()> {
-        let mut term = ratatui::init();
-        self.vendor_selection_page(&mut term)?;
         Ok(())
     }
 }
