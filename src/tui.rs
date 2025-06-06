@@ -14,6 +14,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{self, Block, Borders, List, Paragraph},
 };
+use sanger_rename::SangerFilenameVaraint;
 use std::io::Stdout;
 use std::time::Duration;
 use std::{fmt::Display, io};
@@ -50,6 +51,7 @@ pub struct App {
     vendor_selection_state: VendorSelectionState,
     pub quit_without_selection: bool,
     pub stage: Stage,
+    sangler_fns: SangerFilenames,
 }
 struct VendorSelectionState {
     highlighted: usize,
@@ -72,6 +74,10 @@ enum Stage {
     RenamePreview,
 }
 
+struct SangerFilenames {
+    filenames: Vec<SangerFilenameVaraint>,
+}
+
 impl Default for App {
     fn default() -> App {
         App {
@@ -79,6 +85,9 @@ impl Default for App {
             vendor_selection_state: VendorSelectionState::new(),
             quit_without_selection: false,
             stage: Stage::VendorSelection,
+            sangler_fns: SangerFilenames {
+                filenames: Vec::new(),
+            },
         }
     }
 }
@@ -86,6 +95,9 @@ impl Default for App {
 impl App {
     pub fn new() -> App {
         App::default()
+    }
+    fn add_filename(&mut self, filename: SangerFilenameVaraint) {
+        self.sangler_fns.filenames.push(filename);
     }
     pub fn get_selected_vendor(&self) -> Option<VendorSelection> {
         self.vendor_selection_state.selected_vendor

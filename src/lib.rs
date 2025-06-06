@@ -37,5 +37,3 @@ pub mod vendors {
     pub mod ruibio;
     pub mod sangon;
 }
-
-pub mod tui;

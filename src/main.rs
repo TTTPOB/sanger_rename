@@ -1,7 +1,7 @@
 use clap::Parser;
 
 mod tui;
-use sanger_rename::tui::App;
+use tui::App;
 
 #[derive(Parser)]
 #[command(name = "sanger-rename")]
