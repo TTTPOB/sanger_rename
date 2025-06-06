@@ -20,10 +20,10 @@ struct Args {
     interactive: bool,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let mut app = App::new();
-    app.vendor_selection_page();
+    app.vendor_selection_page()?;
     println!("Selected vendor: {:?}", app.selected_vendor);
     Ok(())
 }
