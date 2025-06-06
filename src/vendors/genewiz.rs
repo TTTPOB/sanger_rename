@@ -1,5 +1,6 @@
 use crate::SangerFilename;
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct GenewizSangerFilename {
     filename: String,
 }
@@ -55,6 +56,9 @@ impl SangerFilename for GenewizSangerFilename {
         // This would typically rename the actual file
         // For now, just return Ok as a placeholder
         Ok(())
+    }
+    fn get_vendor_name(&self) -> String {
+        "Genewiz".to_string()
     }
 }
 

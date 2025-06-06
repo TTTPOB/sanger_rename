@@ -1,5 +1,6 @@
 use crate::SangerFilename;
 
+#[derive(Clone, PartialEq, Debug)]
 pub struct RuibioSangerFilename {
     filename: String,
 }
@@ -52,6 +53,9 @@ impl SangerFilename for RuibioSangerFilename {
         // This would typically rename the actual file
         // For now, just return Ok as a placeholder
         Ok(())
+    }
+    fn get_vendor_name(&self) -> String {
+        "Ruibio".to_string()
     }
 }
 

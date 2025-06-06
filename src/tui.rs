@@ -1,3 +1,4 @@
+use crate::Vendor;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
@@ -12,23 +13,6 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use std::io;
-
-#[derive(Clone, Copy, PartialEq)]
-pub enum Vendor {
-    Sangon,
-    Ruibio,
-    Genewiz,
-}
-
-impl Vendor {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Vendor::Sangon => "Sangon",
-            Vendor::Ruibio => "Ruibio",
-            Vendor::Genewiz => "Genewiz",
-        }
-    }
-}
 
 pub struct App {
     pub should_quit: bool,
