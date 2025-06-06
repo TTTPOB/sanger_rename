@@ -24,5 +24,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     let mut app = App::new();
     app.vendor_selection_page();
+    println!("Selected vendor: {:?}", app.selected_vendor);
     Ok(())
 }
