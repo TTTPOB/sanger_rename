@@ -5,6 +5,14 @@ use crate::vendors::{
 };
 
 pub trait SangerFilename {
+    fn get_full_path(&self) -> String;
+    fn get_file_stem(&self) -> String {
+        std::path::Path::new(&self.get_full_path())
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    }
     fn get_template_name(&self) -> String;
     fn get_primer_name(&self) -> String;
     fn get_vendor_id(&self) -> String;
