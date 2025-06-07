@@ -29,27 +29,217 @@ impl VendorExt for Vendor {
 
 pub struct App {
     pub should_quit: bool,
-    vendor_selection_state: VendorSelectionState,
     pub quit_without_selection: bool,
     pub stage: Stage,
     sanger_fns: SangerFilenames,
     str_fns: StrFilenames,
+    vendor_selection: VendorSelectionStage,
+    primer_rename: PrimerRenameStage,
+    date_selection: DateSelectionStage,
+    rename_preview: RenamePreviewStage,
 }
-struct VendorSelectionState {
+
+// Stage-specific structs
+struct VendorSelectionStage {
     highlighted: usize,
     selected_vendor: Option<Vendor>,
 }
-impl VendorSelectionState {
+
+struct PrimerRenameStage {
+    // Add fields specific to primer rename stage
+    // For now, keeping it empty as it's not implemented yet
+}
+
+struct DateSelectionStage {
+    // Add fields specific to date selection stage
+    // For now, keeping it empty as it's not implemented yet
+}
+
+struct RenamePreviewStage {
+    // Add fields specific to rename preview stage
+    // For now, keeping it empty as it's not implemented yet
+}
+
+impl VendorSelectionStage {
     pub fn new() -> Self {
         Self {
             highlighted: 0,
             selected_vendor: None,
         }
     }
+
+    pub fn set_highlighted(&mut self, index: usize) {
+        if index < Vendor::all().len() {
+            self.highlighted = index;
+        }
+    }
+
+    pub fn get_highlighted(&self) -> usize {
+        self.highlighted
+    }
+
+    pub fn set_selected_vendor(&mut self, vendor: Option<Vendor>) {
+        self.selected_vendor = vendor;
+    }
+
+    pub fn get_selected_vendor(&self) -> Option<Vendor> {
+        self.selected_vendor
+    }
+
+    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
+        if key.kind != KeyEventKind::Press {
+            return StageTransition::Stay;
+        }
+        match key.code {
+            KeyCode::Left => {
+                if self.get_highlighted() == 0 {
+                    self.set_highlighted(Vendor::all().len() - 1); // Wrap around to the last vendor
+                } else {
+                    self.set_highlighted(self.get_highlighted() - 1);
+                }
+                StageTransition::Stay
+            }
+            KeyCode::Right => {
+                if self.get_highlighted() == Vendor::all().len() - 1 {
+                    self.set_highlighted(0); // Wrap around to the first vendor
+                } else {
+                    self.set_highlighted(self.get_highlighted() + 1);
+                }
+                StageTransition::Stay
+            }
+            KeyCode::Enter => {
+                self.set_selected_vendor(Vendor::from_index(self.get_highlighted()));
+                StageTransition::Next(Stage::PrimerRename)
+            }
+            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
+            _ => StageTransition::Stay,
+        }
+    }
+
+    pub fn render(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
+        let vds = Vendor::all()
+            .iter()
+            .map(|v| v.to_string())
+            .collect::<Vec<_>>();
+        let vertical = Layout::vertical([
+            Constraint::Percentage(10),
+            Constraint::Percentage(80),
+            Constraint::Percentage(10),
+        ]);
+        let horizontal = Layout::horizontal([Constraint::Percentage(33); 3]).spacing(1);
+        let [header_area, main_area, _footer_area] = vertical.areas(terminal.get_frame().area());
+        let header_text = format!(
+            "Selected: {}",
+            Vendor::from_index(self.get_highlighted())
+                .map_or("None".to_string(), |v| v.to_string())
+        );
+        let header_widget = Paragraph::new(Line::from(vec![Span::styled(
+            header_text,
+            Style::default().fg(Color::Cyan),
+        )]));
+        let [left, middle, right] = horizontal.areas(main_area);
+        terminal.draw(|f| {
+            let areas = [left, middle, right];
+            for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
+                let is_highlighted = i == self.get_highlighted();
+                let style = if is_highlighted {
+                    Style::default()
+                        .fg(Color::Yellow)
+                        .bg(Color::DarkGray)
+                        .add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default()
+                };
+                let block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(Span::styled(title.clone(), style))
+                    .border_style(style);
+                let block_content = Paragraph::new(title.clone())
+                    .style(style)
+                    .alignment(Alignment::Center)
+                    .block(block);
+                f.render_widget(block_content, *area);
+            }
+            f.render_widget(header_widget, header_area);
+        })?;
+        Ok(())
+    }
+}
+
+impl PrimerRenameStage {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
+        if key.kind != KeyEventKind::Press {
+            return StageTransition::Stay;
+        }
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
+            // Add more key handling as needed
+            _ => StageTransition::Stay,
+        }
+    }
+    pub fn render(&self, _terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
+        // Placeholder for primer rename page logic
+        Ok(())
+    }
+}
+
+impl DateSelectionStage {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
+        if key.kind != KeyEventKind::Press {
+            return StageTransition::Stay;
+        }
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
+            // Add more key handling as needed
+            _ => StageTransition::Stay,
+        }
+    }
+    pub fn render(&self, _terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
+        // Placeholder for date selection page logic
+        Ok(())
+    }
+}
+
+impl RenamePreviewStage {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
+        if key.kind != KeyEventKind::Press {
+            return StageTransition::Stay;
+        }
+        match key.code {
+            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
+            // Add more key handling as needed
+            _ => StageTransition::Stay,
+        }
+    }
+    pub fn render(&self, _terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
+        // Placeholder for rename preview page logic
+        Ok(())
+    }
+}
+
+// Enum to handle stage transitions
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum StageTransition {
+    Stay,
+    Next(Stage),
+    Previous(Stage),
+    Quit,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Stage {
+pub enum Stage {
     VendorSelection,
     PrimerRename,
     DateSelection,
@@ -67,7 +257,6 @@ impl Default for App {
     fn default() -> App {
         App {
             should_quit: false,
-            vendor_selection_state: VendorSelectionState::new(),
             quit_without_selection: false,
             stage: Stage::VendorSelection,
             sanger_fns: SangerFilenames {
@@ -76,6 +265,10 @@ impl Default for App {
             str_fns: StrFilenames {
                 filenames: Vec::new(),
             },
+            vendor_selection: VendorSelectionStage::new(),
+            primer_rename: PrimerRenameStage::new(),
+            date_selection: DateSelectionStage::new(),
+            rename_preview: RenamePreviewStage::new(),
         }
     }
 }
@@ -108,7 +301,7 @@ impl App {
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
         for filename in &self.str_fns.filenames {
-            match self.vendor_selection_state.selected_vendor {
+            match self.vendor_selection.selected_vendor {
                 Some(Vendor::Sangon) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
                     self.sanger_fns.filenames.push(fns);
@@ -129,135 +322,66 @@ impl App {
         Ok(())
     }
     pub fn get_selected_vendor(&self) -> Option<Vendor> {
-        self.vendor_selection_state.selected_vendor
+        self.vendor_selection.selected_vendor
     }
     pub fn set_vendor_highlighted(&mut self, index: usize) {
-        if index < Vendor::all().len() {
-            self.vendor_selection_state.highlighted = index;
-        }
+        self.vendor_selection.set_highlighted(index);
     }
     pub fn get_vendor_highlighted(&self) -> usize {
-        self.vendor_selection_state.highlighted
+        self.vendor_selection.get_highlighted()
     }
     pub fn set_selected_vendor(&mut self, vendor: Option<Vendor>) {
-        self.vendor_selection_state.selected_vendor = vendor;
+        self.vendor_selection.set_selected_vendor(vendor);
     }
     pub fn handle_key_vendor_selection(&mut self, key: KeyEvent) {
-        if key.kind != KeyEventKind::Press {
-            return;
-        }
-        match key.code {
-            KeyCode::Left => {
-                if self.get_vendor_highlighted() == 0 {
-                    self.set_vendor_highlighted(Vendor::all().len() - 1); // Wrap around to the last vendor
-                } else {
-                    self.set_vendor_highlighted(self.get_vendor_highlighted() - 1);
-                }
-            }
-            KeyCode::Right => {
-                if self.get_vendor_highlighted() == Vendor::all().len() - 1 {
-                    self.set_vendor_highlighted(0); // Wrap around to the first vendor
-                } else {
-                    self.set_vendor_highlighted(self.get_vendor_highlighted() + 1);
-                }
-            }
-            KeyCode::Enter => {
-                self.set_selected_vendor(Vendor::from_index(self.get_vendor_highlighted()));
-            }
-            KeyCode::Esc | KeyCode::Char('q') => {
-                self.should_quit = true;
-            }
-            _ => {}
+        let transition = self.vendor_selection.handle_key(key);
+        self.handle_stage_transition(transition);
+    }
+
+    fn handle_stage_transition(&mut self, transition: StageTransition) {
+        match transition {
+            StageTransition::Stay => {}
+            StageTransition::Next(stage) => self.stage = stage,
+            StageTransition::Previous(stage) => self.stage = stage,
+            StageTransition::Quit => self.should_quit = true,
         }
     }
+
     pub fn handle_key(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
         }
-        match self.stage {
-            Stage::VendorSelection => self.handle_key_vendor_selection(key),
-            Stage::PrimerRename => {
-                // Handle keys for primer rename stage
-            }
-            Stage::DateSelection => {
-                // Handle keys for date selection stage
-            }
-            Stage::RenamePreview => {
-                // Handle keys for rename preview stage
-            }
-        }
+        let transition = match self.stage {
+            Stage::VendorSelection => self.vendor_selection.handle_key(key),
+            Stage::PrimerRename => self.primer_rename.handle_key(key),
+            Stage::DateSelection => self.date_selection.handle_key(key),
+            Stage::RenamePreview => self.rename_preview.handle_key(key),
+        };
+        self.handle_stage_transition(transition);
     }
     pub fn vendor_selection_page(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
-        let vds = Vendor::all()
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>();
-        let vertical = Layout::vertical([
-            Constraint::Percentage(10),
-            Constraint::Percentage(80),
-            Constraint::Percentage(10),
-        ]);
-        let horizontal = Layout::horizontal([Constraint::Percentage(33); 3]).spacing(1);
-        let [header_area, main_area, footer_area] = vertical.areas(terminal.get_frame().area());
-        let header_text = format!(
-            "Selected: {}",
-            Vendor::from_index(self.get_vendor_highlighted())
-                .map_or("None".to_string(), |v| v.to_string())
-        );
-        let header_widget = Paragraph::new(Line::from(vec![Span::styled(
-            header_text,
-            Style::default().fg(Color::Cyan),
-        )]));
-        let [left, middle, right] = horizontal.areas(main_area);
-        terminal.draw(|f| {
-            let areas = [left, middle, right];
-            for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
-                let is_highlighted = i == self.get_vendor_highlighted();
-                let style = if is_highlighted {
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .bg(Color::DarkGray)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default()
-                };
-                let block = Block::default()
-                    .borders(Borders::ALL)
-                    .title(Span::styled(title.clone(), style))
-                    .border_style(style);
-                let block_content = Paragraph::new(title.clone())
-                    .style(style)
-                    .alignment(Alignment::Center)
-                    .block(block);
-                f.render_widget(block_content, *area);
-            }
-            f.render_widget(header_widget, header_area);
-        })?;
-        Ok(())
+        self.vendor_selection.render(terminal)
     }
     pub fn primer_rename_page(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
-        // Placeholder for primer rename page logic
-        Ok(())
+        self.primer_rename.render(terminal)
     }
     pub fn date_selection_page(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
-        // Placeholder for date selection page logic
-        Ok(())
+        self.date_selection.render(terminal)
     }
     pub fn rename_preview_page(
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
-        // Placeholder for rename preview page logic
-        Ok(())
+        self.rename_preview.render(terminal)
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
