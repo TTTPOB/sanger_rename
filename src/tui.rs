@@ -51,7 +51,7 @@ pub struct App {
     vendor_selection_state: VendorSelectionState,
     pub quit_without_selection: bool,
     pub stage: Stage,
-    sangler_fns: SangerFilenames,
+    sanger_fns: SangerFilenames,
     sanger_fns_str: SangerFilenamesStr,
 }
 struct VendorSelectionState {
@@ -89,7 +89,7 @@ impl Default for App {
             vendor_selection_state: VendorSelectionState::new(),
             quit_without_selection: false,
             stage: Stage::VendorSelection,
-            sangler_fns: SangerFilenames {
+            sanger_fns: SangerFilenames {
                 filenames: Vec::new(),
             },
             sanger_fns_str: SangerFilenamesStr {
