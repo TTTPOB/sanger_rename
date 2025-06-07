@@ -82,6 +82,15 @@ impl SangerFilename {
             .to_string()
     }
 
+    /// Get the filename with extension but without the full path
+    pub fn show_file_name(&self) -> String {
+        std::path::Path::new(&self.get_full_path())
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    }
+
     pub fn get_template_name(&self) -> String {
         if !self.template_name.is_empty() {
             return self.template_name.clone();
@@ -376,9 +385,27 @@ mod tests {
 
     #[test]
     fn test_vendor_from_string() {
-        assert_eq!("sangon".parse::<Vendor>().unwrap(), Vendor::Sangon);
-        assert_eq!("Ruibio".parse::<Vendor>().unwrap(), Vendor::Ruibio);
-        assert_eq!("GENEWIZ".parse::<Vendor>().unwrap(), Vendor::Genewiz);
-        assert!("unknown".parse::<Vendor>().is_err());
+        assert_eq!(Vendor::from_str("sangon").unwrap(), Vendor::Sangon);
+        assert_eq!(Vendor::from_str("RUIBIO").unwrap(), Vendor::Ruibio);
+        assert_eq!(Vendor::from_str("GenEwiz").unwrap(), Vendor::Genewiz);
+        assert!(Vendor::from_str("unknown").is_err());
+    }
+
+    #[test]
+    fn test_show_file_name() {
+        let filename1 = "0001_31225060307072_(TXPCR)_[SP1].ab1";
+        let sanger_fn1 = SangerFilename::new(filename1.to_string(), Vendor::Sangon);
+        assert_eq!(
+            sanger_fn1.show_file_name(),
+            "0001_31225060307072_(TXPCR)_[SP1].ab1"
+        );
+
+        let filename2 = "/path/to/file/K528-1.C1.34781340.B08.ab1";
+        let sanger_fn2 = SangerFilename::new(filename2.to_string(), Vendor::Ruibio);
+        assert_eq!(sanger_fn2.show_file_name(), "K528-1.C1.34781340.B08.ab1");
+
+        let filename3 = "C:\\Users\\test\\TL1-T25_A01.ab1";
+        let sanger_fn3 = SangerFilename::new(filename3.to_string(), Vendor::Genewiz);
+        assert_eq!(sanger_fn3.show_file_name(), "TL1-T25_A01.ab1");
     }
 }

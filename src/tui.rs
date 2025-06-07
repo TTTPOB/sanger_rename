@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Paragraph, Row, Table},
 };
 use sanger_rename::{SangerFilename, Vendor};
 use std::io::Stdout;
@@ -38,7 +38,6 @@ pub struct App {
     vendor_selection: VendorSelectionStage,
     primer_rename: PrimerRenameStage,
     date_selection: DateSelectionStage,
-    rename_preview: RenamePreviewStage,
 }
 
 // Stage-specific structs
@@ -57,11 +56,6 @@ struct PrimerRenameStage {
 
 struct DateSelectionStage {
     // Add fields specific to date selection stage
-    // For now, keeping it empty as it's not implemented yet
-}
-
-struct RenamePreviewStage {
-    // Add fields specific to rename preview stage
     // For now, keeping it empty as it's not implemented yet
 }
 
@@ -272,9 +266,11 @@ impl PrimerRenameStage {
         let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
 
         terminal.draw(|f| {
-            let chunks =
-                Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
-                    .split(f.area());
+            let chunks = Layout::horizontal([
+                Constraint::Percentage(50), // Left panel: Primer names with rename inputs
+                Constraint::Percentage(50), // Right panel: Rename preview table
+            ])
+            .split(f.area());
 
             // Left panel: Primer names with rename inputs
             let left_items: Vec<Line> = primer_names
@@ -310,30 +306,29 @@ impl PrimerRenameStage {
             let left_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Primer Names (Enter to edit, Tab to continue)");
-            let left_paragraph = Paragraph::new(left_items)
+            let primer_rename_view = Paragraph::new(left_items)
                 .block(left_block)
                 .wrap(ratatui::widgets::Wrap { trim: true });
-            // Right panel: Sanger filenames for reference
-            let sanger_fns = self.sanger_fns.lock().unwrap();
-            let right_items: Vec<Line> = sanger_fns
-                .filenames
-                .iter()
-                .map(|sf| {
-                    Line::from(vec![Span::raw(format!(
-                        "{}: {}",
-                        sf.get_primer_name(),
-                        sf.get_file_stem()
-                    ))])
-                })
-                .collect();
 
-            let right_block = Block::default().borders(Borders::ALL).title("Sanger Files");
-            let right_paragraph = Paragraph::new(right_items)
-                .block(right_block)
-                .wrap(ratatui::widgets::Wrap { trim: true });
+            let header = Row::new(["Original", "Standardized"])
+                .style(Style::default().add_modifier(Modifier::BOLD));
+            let mut rows = vec![];
+            for sf in self.sanger_fns.lock().unwrap().filenames.iter() {
+                let original_name = sf.show_file_name();
+                let standardized_name = format!("{}.ab1", sf.get_standardized_name(None));
+                rows.push(Row::new([original_name, standardized_name]));
+            }
 
-            f.render_widget(left_paragraph, chunks[0]);
-            f.render_widget(right_paragraph, chunks[1]);
+            let right_block = Block::default()
+                .borders(Borders::ALL)
+                .title("Rename Preview");
+            let table_width = [Constraint::Percentage(50), Constraint::Percentage(50)];
+            let rename_preview_view = Table::new(rows, table_width)
+                .header(header)
+                .block(right_block);
+
+            f.render_widget(primer_rename_view, chunks[0]);
+            f.render_widget(rename_preview_view, chunks[1]);
         })?;
 
         Ok(())
@@ -361,27 +356,6 @@ impl DateSelectionStage {
     }
 }
 
-impl RenamePreviewStage {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
-        if key.kind != KeyEventKind::Press {
-            return StageTransition::Stay;
-        }
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-            // Add more key handling as needed
-            _ => StageTransition::Stay,
-        }
-    }
-    pub fn render(&self, _terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        // Placeholder for rename preview page logic
-        Ok(())
-    }
-}
-
 // Enum to handle stage transitions
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum StageTransition {
@@ -396,7 +370,6 @@ pub enum Stage {
     VendorSelection,
     PrimerRename,
     DateSelection,
-    RenamePreview,
 }
 
 struct SangerFilenames {
@@ -421,7 +394,6 @@ impl Default for App {
             vendor_selection: VendorSelectionStage::new(),
             primer_rename: PrimerRenameStage::init(),
             date_selection: DateSelectionStage::new(),
-            rename_preview: RenamePreviewStage::new(),
         }
     }
 }
@@ -491,7 +463,6 @@ impl App {
         let transition = self.vendor_selection.handle_key(key);
         self.handle_stage_transition(transition);
     }
-
     fn handle_stage_transition(&mut self, transition: StageTransition) {
         match transition {
             StageTransition::Stay => {}
@@ -506,9 +477,6 @@ impl App {
                     Stage::DateSelection => {
                         self.date_selection = DateSelectionStage::new();
                     }
-                    Stage::RenamePreview => {
-                        self.rename_preview = RenamePreviewStage::new();
-                    }
                     _ => {}
                 }
             }
@@ -516,7 +484,6 @@ impl App {
             StageTransition::Quit => self.should_quit = true,
         }
     }
-
     pub fn handle_key(&mut self, key: KeyEvent) {
         if key.kind != KeyEventKind::Press {
             return;
@@ -525,7 +492,6 @@ impl App {
             Stage::VendorSelection => self.vendor_selection.handle_key(key),
             Stage::PrimerRename => self.primer_rename.handle_key(key),
             Stage::DateSelection => self.date_selection.handle_key(key),
-            Stage::RenamePreview => self.rename_preview.handle_key(key),
         };
         self.handle_stage_transition(transition);
     }
@@ -547,12 +513,6 @@ impl App {
     ) -> anyhow::Result<()> {
         self.date_selection.render(terminal)
     }
-    pub fn rename_preview_page(
-        &mut self,
-        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    ) -> anyhow::Result<()> {
-        self.rename_preview.render(terminal)
-    }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
         let mut term = ratatui::init();
@@ -566,9 +526,6 @@ impl App {
                 }
                 Stage::DateSelection => {
                     self.date_selection_page(&mut term)?;
-                }
-                Stage::RenamePreview => {
-                    self.rename_preview_page(&mut term)?;
                 }
             }
             if let Some(ev) = event::read()?.as_key_press_event() {
