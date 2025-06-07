@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{any, str::FromStr};
 use strum::EnumIter;
 use time::{UtcOffset, macros::datetime};
 
@@ -165,9 +165,19 @@ impl SangerFilename {
         self.template_name = template_name;
     }
 
-    pub fn rename(&self, _new_name: &str) -> Result<(), String> {
-        // This would typically rename the actual file
-        // For now, just return Ok as a placeholder
+    pub fn move_to_standardized_name(&self) -> anyhow::Result<()> {
+        let standardized_name = self.get_standardized_name();
+        let new_path =
+            std::path::Path::new(&self.get_full_path()).with_file_name(standardized_name);
+
+        let new_path = format!(
+            "{}.{}",
+            new_path.to_string_lossy(),
+            self.get_extension_name()
+        );
+
+        // Rename the file on disk
+        std::fs::rename(&self.get_full_path(), new_path)?;
         Ok(())
     }
 
@@ -429,5 +439,36 @@ mod tests {
         let filename3 = "C:\\Users\\test\\TL1-T25_A01.ab1";
         let sanger_fn3 = SangerFilename::new(filename3.to_string(), Vendor::Genewiz);
         assert_eq!(sanger_fn3.show_file_name(), "TL1-T25_A01.ab1");
+    }
+
+    #[test]
+    fn test_move_to_standardized_name() {
+        let filename = "0001_31225060307072_(TXPCR)_[SP1].ab1";
+        // create the file at system temp dir
+        let temp_dir = std::env::temp_dir();
+        let full_path = temp_dir.join(filename);
+        std::fs::write(&full_path, b"test content").expect("Failed to create test file");
+        let mut sanger_fn =
+            SangerFilename::new(full_path.to_string_lossy().to_string(), Vendor::Sangon);
+        let date = time::Date::from_calendar_date(2025, time::Month::June, 1)
+            .expect("Failed to create date");
+        sanger_fn.set_date(date).unwrap();
+        // Move to standardized name
+        sanger_fn
+            .move_to_standardized_name()
+            .expect("Failed to move file");
+        // Check if the file was renamed correctly
+        let standardized_name = sanger_fn.get_standardized_name();
+        let new_full_path = temp_dir.join(format!("{}.ab1", standardized_name));
+        // print content of the temp dir for debugging
+        let dir_content = std::fs::read_dir(temp_dir).unwrap();
+        for entry in dir_content {
+            let entry = entry.unwrap();
+            // if ends with .ab1, print the file name
+            if entry.path().extension().map_or(false, |ext| ext == "ab1") {
+                println!("File in temp dir: {}", entry.path().display());
+            }
+        }
+        assert!(new_full_path.exists(), "Standardized file does not exist");
     }
 }
