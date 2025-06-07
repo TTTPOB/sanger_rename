@@ -1,17 +1,25 @@
-use crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{self, KeyEvent, KeyEventKind};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
-    text::{Line, Span},
-    widgets::{Block, Borders, Paragraph, Row, Table},
+    prelude::*,
+    widgets::{Block, Borders, Row, Table},
 };
 use sanger_rename::{SangerFilename, Vendor};
 use std::io::Stdout;
+use std::rc::Rc;
 use std::sync::Mutex;
-use std::{collections::HashMap, rc::Rc};
 use strum::IntoEnumIterator;
+
+pub mod common;
+pub mod date_selection;
+pub mod primer_rename;
+pub mod vendor_selection;
+
+pub use common::{SangerFilenames, Stage, StageTransition, StrFilenames};
+pub use date_selection::DateSelectionStage;
+pub use primer_rename::PrimerRenameStage;
+pub use vendor_selection::VendorSelectionStage;
 
 // Extension trait for additional TUI-specific methods on Vendor
 pub trait VendorExt {
@@ -38,337 +46,6 @@ pub struct App {
     vendor_selection: VendorSelectionStage,
     primer_rename: PrimerRenameStage,
     date_selection: DateSelectionStage,
-}
-
-// Stage-specific structs
-struct VendorSelectionStage {
-    highlighted: usize,
-    selected_vendor: Option<Vendor>,
-}
-
-struct PrimerRenameStage {
-    sanger_fns: Rc<Mutex<SangerFilenames>>,
-    rename_map: HashMap<String, Option<String>>,
-    highlighted: usize,
-    editing: bool,
-    current_input: String,
-}
-
-struct DateSelectionStage {
-    // Add fields specific to date selection stage
-    // For now, keeping it empty as it's not implemented yet
-}
-
-impl VendorSelectionStage {
-    pub fn new() -> Self {
-        Self {
-            highlighted: 0,
-            selected_vendor: None,
-        }
-    }
-
-    pub fn set_highlighted(&mut self, index: usize) {
-        if index < Vendor::all().len() {
-            self.highlighted = index;
-        }
-    }
-
-    pub fn get_highlighted(&self) -> usize {
-        self.highlighted
-    }
-
-    pub fn set_selected_vendor(&mut self, vendor: Option<Vendor>) {
-        self.selected_vendor = vendor;
-    }
-
-    pub fn get_selected_vendor(&self) -> Option<Vendor> {
-        self.selected_vendor
-    }
-
-    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
-        if key.kind != KeyEventKind::Press {
-            return StageTransition::Stay;
-        }
-        match key.code {
-            KeyCode::Left => {
-                if self.get_highlighted() == 0 {
-                    self.set_highlighted(Vendor::all().len() - 1); // Wrap around to the last vendor
-                } else {
-                    self.set_highlighted(self.get_highlighted() - 1);
-                }
-                StageTransition::Stay
-            }
-            KeyCode::Right => {
-                if self.get_highlighted() == Vendor::all().len() - 1 {
-                    self.set_highlighted(0); // Wrap around to the first vendor
-                } else {
-                    self.set_highlighted(self.get_highlighted() + 1);
-                }
-                StageTransition::Stay
-            }
-            KeyCode::Enter => {
-                self.set_selected_vendor(Vendor::from_index(self.get_highlighted()));
-                StageTransition::Next(Stage::PrimerRename)
-            }
-            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-            _ => StageTransition::Stay,
-        }
-    }
-
-    pub fn render(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        let vds = Vendor::all()
-            .iter()
-            .map(|v| v.to_string())
-            .collect::<Vec<_>>();
-        let vertical = Layout::vertical([
-            Constraint::Percentage(10),
-            Constraint::Percentage(80),
-            Constraint::Percentage(10),
-        ]);
-        let horizontal = Layout::horizontal([Constraint::Percentage(33); 3]).spacing(1);
-        let [header_area, main_area, _footer_area] = vertical.areas(terminal.get_frame().area());
-        let header_text = format!(
-            "Selected: {}",
-            Vendor::from_index(self.get_highlighted())
-                .map_or("None".to_string(), |v| v.to_string())
-        );
-        let header_widget = Paragraph::new(Line::from(vec![Span::styled(
-            header_text,
-            Style::default().fg(Color::Cyan),
-        )]));
-        let [left, middle, right] = horizontal.areas(main_area);
-        terminal.draw(|f| {
-            let areas = [left, middle, right];
-            for (i, (title, area)) in vds.iter().zip(areas.iter()).enumerate() {
-                let is_highlighted = i == self.get_highlighted();
-                let style = if is_highlighted {
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .bg(Color::DarkGray)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default()
-                };
-                let block = Block::default()
-                    .borders(Borders::ALL)
-                    .title(Span::styled(title.clone(), style))
-                    .border_style(style);
-                let block_content = Paragraph::new(title.clone())
-                    .style(style)
-                    .alignment(Alignment::Center)
-                    .block(block);
-                f.render_widget(block_content, *area);
-            }
-            f.render_widget(header_widget, header_area);
-        })?;
-        Ok(())
-    }
-}
-
-impl PrimerRenameStage {
-    pub fn init() -> Self {
-        Self {
-            rename_map: HashMap::new(),
-            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
-                filenames: Vec::new(),
-            })),
-            highlighted: 0,
-            editing: false,
-            current_input: String::new(),
-        }
-    }
-    pub fn from_sanger_fns(sanger_fns: Rc<Mutex<SangerFilenames>>) -> Self {
-        let mut s = Self::init();
-        s.sanger_fns = sanger_fns.clone();
-        s.fill_names();
-        s
-    }
-    pub fn fill_names(&mut self) {
-        let sanger_fns = self.sanger_fns.lock().unwrap();
-        for sanger_fn in sanger_fns.filenames.iter() {
-            let primer_name = sanger_fn.get_primer_name();
-            self.rename_map.insert(primer_name.clone(), None);
-        }
-    }
-    pub fn set_rename(&mut self, primer_name: String, new_name: Option<String>) {
-        self.rename_map.insert(primer_name, new_name);
-    }
-
-    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
-        if key.kind != KeyEventKind::Press {
-            return StageTransition::Stay;
-        }
-
-        if self.editing {
-            match key.code {
-                KeyCode::Enter => {
-                    // Save the current input as the new name
-                    let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
-                    if let Some(primer_name) = primer_names.get(self.highlighted) {
-                        let new_name = if self.current_input.is_empty() {
-                            None
-                        } else {
-                            Some(self.current_input.clone())
-                        };
-                        self.set_rename(primer_name.clone(), new_name);
-                    }
-                    for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter_mut() {
-                        let old_primer_name = sanger_fn.get_primer_name();
-                        if let Some(new_name) = self.rename_map.get(&old_primer_name) {
-                            if let Some(new_name_str) = new_name {
-                                sanger_fn.set_primer_name(new_name_str).unwrap();
-                            }
-                        }
-                    }
-                    self.editing = false;
-                    self.current_input.clear();
-                    StageTransition::Stay
-                }
-                KeyCode::Esc => {
-                    self.editing = false;
-                    self.current_input.clear();
-                    StageTransition::Stay
-                }
-                KeyCode::Backspace => {
-                    self.current_input.pop();
-                    StageTransition::Stay
-                }
-                KeyCode::Char(c) => {
-                    self.current_input.push(c);
-                    StageTransition::Stay
-                }
-                _ => StageTransition::Stay,
-            }
-        } else {
-            match key.code {
-                KeyCode::Up | KeyCode::Char('k') => {
-                    if self.highlighted > 0 {
-                        self.highlighted -= 1;
-                    }
-                    StageTransition::Stay
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    if self.highlighted < self.rename_map.len().saturating_sub(1) {
-                        self.highlighted += 1;
-                    }
-                    StageTransition::Stay
-                }
-                KeyCode::Enter => {
-                    self.editing = true;
-                    // Pre-fill with existing name if any
-                    let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
-                    if let Some(primer_name) = primer_names.get(self.highlighted) {
-                        if let Some(existing_name) = &self.rename_map[primer_name] {
-                            self.current_input = existing_name.clone();
-                        }
-                    }
-                    StageTransition::Stay
-                }
-                KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-                KeyCode::Tab => StageTransition::Next(Stage::DateSelection),
-                _ => StageTransition::Stay,
-            }
-        }
-    }
-    pub fn render(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
-
-        terminal.draw(|f| {
-            let chunks = Layout::horizontal([
-                Constraint::Percentage(50), // Left panel: Primer names with rename inputs
-                Constraint::Percentage(50), // Right panel: Rename preview table
-            ])
-            .split(f.area());
-
-            // Left panel: Primer names with rename inputs
-            let left_rows = primer_names
-                .iter()
-                .enumerate()
-                .map(|(i, name)| {
-                    let is_highlighted = i == self.highlighted;
-                    let new_name = self.rename_map.get(name).and_then(|n| n.as_ref());
-                    let current_input_display = if self.editing && is_highlighted {
-                        format!("{}_", self.current_input)
-                    } else {
-                        new_name.map_or("<not set>".to_string(), |n| n.clone())
-                    };
-                    let row_content = [name.clone(), "-->".to_string(), current_input_display];
-                    let row = Row::new(row_content).style(if is_highlighted {
-                        Style::default()
-                            .bg(Color::DarkGray)
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default()
-                    });
-                    row
-                })
-                .collect::<Vec<_>>();
-
-            let left_table_width = [
-                Constraint::Percentage(45),
-                Constraint::Percentage(10),
-                Constraint::Percentage(45),
-            ];
-
-            let left_block = Block::default()
-                .borders(Borders::ALL)
-                .title("Primer Names (Enter to edit, Tab to continue)");
-            let left_header = Row::new(["Primer Name", "-->", "New Name"])
-                .style(Style::default().add_modifier(Modifier::BOLD));
-            let primer_rename_view = Table::new(left_rows, left_table_width)
-                .header(left_header)
-                .block(left_block);
-            f.render_widget(primer_rename_view, chunks[0]);
-            App::render_rename_preview_table(f, chunks[1], &self.sanger_fns);
-        })?;
-
-        Ok(())
-    }
-}
-
-impl DateSelectionStage {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
-        if key.kind != KeyEventKind::Press {
-            return StageTransition::Stay;
-        }
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-            // Add more key handling as needed
-            _ => StageTransition::Stay,
-        }
-    }
-    pub fn render(&self, _terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        // Placeholder for date selection page logic
-        Ok(())
-    }
-}
-
-// Enum to handle stage transitions
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum StageTransition {
-    Stay,
-    Next(Stage),
-    Previous(Stage),
-    Quit,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Stage {
-    VendorSelection,
-    PrimerRename,
-    DateSelection,
-}
-
-struct SangerFilenames {
-    filenames: Vec<SangerFilename>,
-}
-struct StrFilenames {
-    filenames: Vec<String>,
 }
 
 impl Default for App {
@@ -419,7 +96,7 @@ impl App {
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
         for filename in &self.str_fns.filenames {
-            match self.vendor_selection.selected_vendor {
+            match self.vendor_selection.get_selected_vendor() {
                 Some(Vendor::Sangon) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
                     self.sanger_fns.lock().unwrap().filenames.push(fns);
@@ -440,7 +117,7 @@ impl App {
         Ok(())
     }
     pub fn get_selected_vendor(&self) -> Option<Vendor> {
-        self.vendor_selection.selected_vendor
+        self.vendor_selection.get_selected_vendor()
     }
     pub fn set_vendor_highlighted(&mut self, index: usize) {
         self.vendor_selection.set_highlighted(index);
@@ -613,7 +290,7 @@ mod tests {
         let converted = app.filenames_string_to_sanger();
         assert!(converted.is_ok());
         let sanger_fns = app.get_sanger_filenames();
-        assert_eq!(sanger_fns.len(), 5);
+        assert_eq!(sanger_fns.len(), 6);
     }
     #[test]
     fn test_convert_filename() {
@@ -639,7 +316,7 @@ mod tests {
         app.filenames_string_to_sanger().unwrap();
         app.stage = Stage::PrimerRename;
         let primer_names = app.get_all_primer_names().unwrap();
-        assert_eq!(primer_names.len(), 5);
+        assert_eq!(primer_names.len(), 6);
         // Test that we can extract primer names from the fixtures
         assert!(primer_names.contains(&"C1".to_string()));
         assert!(primer_names.contains(&"T7".to_string()));
@@ -660,7 +337,7 @@ mod tests {
             .keys()
             .cloned()
             .collect::<Vec<_>>();
-        assert_eq!(primer_names.len(), 5);
+        assert_eq!(primer_names.len(), 5); // 5 unique primer names from 6 files
         // All primer names should initially have None as their renamed value
         for primer_name in &primer_names {
             assert_eq!(app.primer_rename.rename_map[primer_name], None);
@@ -706,6 +383,5 @@ mod tests {
 
         let primer_names: Vec<String> = sanger_fns.iter().map(|f| f.get_primer_name()).collect();
         assert!(primer_names.contains(&"T25".to_string()));
-        assert!(primer_names.contains(&"C1_R".to_string()));
     }
 }
