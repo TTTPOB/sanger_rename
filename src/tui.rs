@@ -318,19 +318,28 @@ impl PrimerRenameStage {
                 .block(left_block)
                 .wrap(ratatui::widgets::Wrap { trim: true });
 
-            let header = Row::new(["Original", "Standardized"])
+            let header = Row::new(["Original", "-->", "Standardized"])
                 .style(Style::default().add_modifier(Modifier::BOLD));
             let mut rows = vec![];
             for sf in self.sanger_fns.lock().unwrap().filenames.iter() {
                 let original_name = sf.show_file_name();
-                let standardized_name = format!("{}.ab1", sf.get_standardized_name());
-                rows.push(Row::new([original_name, standardized_name]));
+                let extname = sf.get_extension_name();
+                let standardized_name = format!("{}.{}", sf.get_standardized_name(), extname);
+                rows.push(Row::new([
+                    original_name,
+                    "-->".to_string(),
+                    standardized_name,
+                ]));
             }
 
             let right_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Rename Preview");
-            let table_width = [Constraint::Percentage(50), Constraint::Percentage(50)];
+            let table_width = [
+                Constraint::Percentage(45),
+                Constraint::Percentage(10),
+                Constraint::Percentage(45),
+            ];
             let rename_preview_view = Table::new(rows, table_width)
                 .header(header)
                 .block(right_block);

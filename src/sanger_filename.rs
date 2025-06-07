@@ -92,6 +92,14 @@ impl SangerFilename {
             .to_string()
     }
 
+    pub fn get_extension_name(&self) -> String {
+        std::path::Path::new(&self.get_full_path())
+            .extension()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string()
+    }
+
     pub fn get_template_name(&self) -> String {
         if !self.template_name.is_empty() {
             return self.template_name.clone();
