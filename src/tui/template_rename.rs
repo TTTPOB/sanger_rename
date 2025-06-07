@@ -172,7 +172,10 @@ impl TemplateRenameStage {
 
             let left_block = Block::default()
                 .borders(Borders::ALL)
-                .title("Template Names (Enter to edit, Tab to continue)");
+                .style(Style::default().fg(Color::Cyan))
+                .title("Template Names (Enter to edit, Tab to continue)")
+                .title_alignment(Alignment::Center);
+
             let left_header = Row::new(["Template Name", "-->", "New Name"])
                 .style(Style::default().add_modifier(Modifier::BOLD));
             let template_rename_view = Table::new(left_rows, left_table_width)
