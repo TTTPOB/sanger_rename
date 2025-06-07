@@ -47,7 +47,7 @@ pub struct App {
     pub quit_without_selection: bool,
     pub stage: Stage,
     sanger_fns: SangerFilenames,
-    sanger_fns_str: SangerFilenamesStr,
+    str_fns: StrFilenames,
 }
 struct VendorSelectionState {
     highlighted: usize,
@@ -73,7 +73,7 @@ enum Stage {
 struct SangerFilenames {
     filenames: Vec<SangerFilenameVariant>,
 }
-struct SangerFilenamesStr {
+struct StrFilenames {
     filenames: Vec<String>,
 }
 
@@ -87,7 +87,7 @@ impl Default for App {
             sanger_fns: SangerFilenames {
                 filenames: Vec::new(),
             },
-            sanger_fns_str: SangerFilenamesStr {
+            str_fns: StrFilenames {
                 filenames: Vec::new(),
             },
         }
@@ -99,19 +99,19 @@ impl App {
         App::default()
     }
     fn add_filename(&mut self, filename: String) {
-        self.sanger_fns_str.filenames.push(filename);
+        self.str_fns.filenames.push(filename);
     }
     pub fn add_filenames(&mut self, filenames: Vec<String>) {
-        self.sanger_fns_str.filenames.extend(filenames);
+        self.str_fns.filenames.extend(filenames);
     }
     pub fn get_filenames(&self) -> &Vec<String> {
-        &self.sanger_fns_str.filenames
+        &self.str_fns.filenames
     }
     pub fn get_sanger_filenames(&self) -> &Vec<SangerFilenameVariant> {
         &self.sanger_fns.filenames
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
-        for filename in &self.sanger_fns_str.filenames {
+        for filename in &self.str_fns.filenames {
             match self.vendor_selection_state.selected_vendor {
                 Some(VendorSelection::Sangon) => {
                     let fns = SangonSangerFilename::from(filename.clone());
