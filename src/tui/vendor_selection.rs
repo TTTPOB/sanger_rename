@@ -10,8 +10,8 @@ use ratatui::{
 use sanger_rename::Vendor;
 use std::io::Stdout;
 
-use super::common::{Stage, StageTransition};
 use super::VendorExt;
+use super::common::{Stage, StageTransition};
 
 pub struct VendorSelectionStage {
     pub highlighted: usize,
@@ -49,7 +49,7 @@ impl VendorSelectionStage {
             return StageTransition::Stay;
         }
         match key.code {
-            KeyCode::Left => {
+            KeyCode::Left | KeyCode::Char('h') => {
                 if self.get_highlighted() == 0 {
                     self.set_highlighted(Vendor::all().len() - 1); // Wrap around to the last vendor
                 } else {
@@ -57,7 +57,7 @@ impl VendorSelectionStage {
                 }
                 StageTransition::Stay
             }
-            KeyCode::Right => {
+            KeyCode::Right | KeyCode::Char('l') => {
                 if self.get_highlighted() == Vendor::all().len() - 1 {
                     self.set_highlighted(0); // Wrap around to the first vendor
                 } else {
