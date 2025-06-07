@@ -1,6 +1,7 @@
 use std::str::FromStr;
+use strum::EnumIter;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, EnumIter)]
 pub enum Vendor {
     Sangon,
     Ruibio,
@@ -49,14 +50,18 @@ impl SangerFilename {
             date: None,
             vendor,
         };
-        
+
         // Extract primer and template names based on vendor
         let primer_name = sanger_filename.get_primer_name();
         let template_name = sanger_filename.get_template_name();
-        
-        sanger_filename.set_primer_name(&primer_name).expect("Failed to set primer name");
-        sanger_filename.set_template_name(&template_name).expect("Failed to set template name");
-        
+
+        sanger_filename
+            .set_primer_name(&primer_name)
+            .expect("Failed to set primer name");
+        sanger_filename
+            .set_template_name(&template_name)
+            .expect("Failed to set template name");
+
         sanger_filename
     }
 
@@ -81,7 +86,7 @@ impl SangerFilename {
         if !self.template_name.is_empty() {
             return self.template_name.clone();
         }
-        
+
         match self.vendor {
             Vendor::Sangon => self.extract_sangon_template_name(),
             Vendor::Ruibio => self.extract_ruibio_template_name(),
@@ -93,7 +98,7 @@ impl SangerFilename {
         if !self.primer_name.is_empty() {
             return self.primer_name.clone();
         }
-        
+
         match self.vendor {
             Vendor::Sangon => self.extract_sangon_primer_name(),
             Vendor::Ruibio => self.extract_ruibio_primer_name(),
@@ -130,7 +135,8 @@ impl SangerFilename {
 
     pub fn get_vendor(&self) -> &Vendor {
         &self.vendor
-    }    pub fn set_vendor(&mut self, vendor: Vendor) {
+    }
+    pub fn set_vendor(&mut self, vendor: Vendor) {
         self.vendor = vendor;
         // Clear cached values and re-extract based on new vendor
         self.primer_name = String::new();
@@ -195,7 +201,7 @@ impl SangerFilename {
             return parts[1].to_string();
         }
         String::new()
-    }    // Ruibio-specific extraction methods
+    } // Ruibio-specific extraction methods
     fn extract_ruibio_template_name(&self) -> String {
         // Extract template name from pattern like "K528-1.C1.34781340.B08"
         // Template is everything before the first dot
@@ -349,16 +355,17 @@ mod tests {
         assert_eq!(genewiz_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(genewiz_sanger_fn.get_template_name(), template_name);
         assert_eq!(genewiz_sanger_fn.get_primer_name(), primer_name);
-    }    #[test]
+    }
+    #[test]
     fn test_vendor_switching() {
         let filename = "0001_31225060307072_(TXPCR)_[SP1].ab1";
         let mut sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
-        
+
         // Test initial Sangon extraction
         assert_eq!(sanger_fn.get_vendor_name(), "Sangon");
         assert_eq!(sanger_fn.get_template_name(), "TXPCR");
         assert_eq!(sanger_fn.get_primer_name(), "SP1");
-        
+
         // Switch to Ruibio (should extract differently, but filename doesn't match Ruibio pattern)
         sanger_fn.set_vendor(Vendor::Ruibio);
         assert_eq!(sanger_fn.get_vendor_name(), "Ruibio");

@@ -8,33 +8,22 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use sanger_rename::{SangerFilename, Vendor};
-use std::fmt::Display;
 use std::io::Stdout;
-use strum::{EnumIter, IntoEnumIterator};
+use strum::IntoEnumIterator;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
-pub enum VendorSelection {
-    Sangon,
-    Ruibio,
-    Genewiz,
+// Extension trait for additional TUI-specific methods on Vendor
+pub trait VendorExt {
+    fn all() -> Vec<Vendor>;
+    fn from_index(index: usize) -> Option<Vendor>;
 }
 
-impl VendorSelection {
-    pub fn all() -> Vec<VendorSelection> {
-        VendorSelection::iter().collect()
+impl VendorExt for Vendor {
+    fn all() -> Vec<Vendor> {
+        Vendor::iter().collect()
     }
-    pub fn from_index(index: usize) -> Option<VendorSelection> {
+
+    fn from_index(index: usize) -> Option<Vendor> {
         Self::all().get(index).copied()
-    }
-}
-
-impl Display for VendorSelection {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            VendorSelection::Sangon => write!(f, "Sangon"),
-            VendorSelection::Ruibio => write!(f, "Ruibio"),
-            VendorSelection::Genewiz => write!(f, "Genewiz"),
-        }
     }
 }
 
@@ -48,7 +37,7 @@ pub struct App {
 }
 struct VendorSelectionState {
     highlighted: usize,
-    selected_vendor: Option<VendorSelection>,
+    selected_vendor: Option<Vendor>,
 }
 impl VendorSelectionState {
     pub fn new() -> Self {
@@ -120,15 +109,15 @@ impl App {
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
         for filename in &self.str_fns.filenames {
             match self.vendor_selection_state.selected_vendor {
-                Some(VendorSelection::Sangon) => {
+                Some(Vendor::Sangon) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
                     self.sanger_fns.filenames.push(fns);
                 }
-                Some(VendorSelection::Ruibio) => {
+                Some(Vendor::Ruibio) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Ruibio);
                     self.sanger_fns.filenames.push(fns);
                 }
-                Some(VendorSelection::Genewiz) => {
+                Some(Vendor::Genewiz) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Genewiz);
                     self.sanger_fns.filenames.push(fns);
                 }
@@ -139,18 +128,18 @@ impl App {
         }
         Ok(())
     }
-    pub fn get_selected_vendor(&self) -> Option<VendorSelection> {
+    pub fn get_selected_vendor(&self) -> Option<Vendor> {
         self.vendor_selection_state.selected_vendor
     }
     pub fn set_vendor_highlighted(&mut self, index: usize) {
-        if index < VendorSelection::all().len() {
+        if index < Vendor::all().len() {
             self.vendor_selection_state.highlighted = index;
         }
     }
     pub fn get_vendor_highlighted(&self) -> usize {
         self.vendor_selection_state.highlighted
     }
-    pub fn set_selected_vendor(&mut self, vendor: Option<VendorSelection>) {
+    pub fn set_selected_vendor(&mut self, vendor: Option<Vendor>) {
         self.vendor_selection_state.selected_vendor = vendor;
     }
     pub fn handle_key_vendor_selection(&mut self, key: KeyEvent) {
@@ -160,22 +149,20 @@ impl App {
         match key.code {
             KeyCode::Left => {
                 if self.get_vendor_highlighted() == 0 {
-                    self.set_vendor_highlighted(VendorSelection::all().len() - 1); // Wrap around to the last vendor
+                    self.set_vendor_highlighted(Vendor::all().len() - 1); // Wrap around to the last vendor
                 } else {
                     self.set_vendor_highlighted(self.get_vendor_highlighted() - 1);
                 }
             }
             KeyCode::Right => {
-                if self.get_vendor_highlighted() == VendorSelection::all().len() - 1 {
+                if self.get_vendor_highlighted() == Vendor::all().len() - 1 {
                     self.set_vendor_highlighted(0); // Wrap around to the first vendor
                 } else {
                     self.set_vendor_highlighted(self.get_vendor_highlighted() + 1);
                 }
             }
             KeyCode::Enter => {
-                self.set_selected_vendor(VendorSelection::from_index(
-                    self.get_vendor_highlighted(),
-                ));
+                self.set_selected_vendor(Vendor::from_index(self.get_vendor_highlighted()));
             }
             KeyCode::Esc | KeyCode::Char('q') => {
                 self.should_quit = true;
@@ -204,7 +191,7 @@ impl App {
         &mut self,
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
-        let vds = VendorSelection::all()
+        let vds = Vendor::all()
             .iter()
             .map(|v| v.to_string())
             .collect::<Vec<_>>();
@@ -217,7 +204,7 @@ impl App {
         let [header_area, main_area, footer_area] = vertical.areas(terminal.get_frame().area());
         let header_text = format!(
             "Selected: {}",
-            VendorSelection::from_index(self.get_vendor_highlighted())
+            Vendor::from_index(self.get_vendor_highlighted())
                 .map_or("None".to_string(), |v| v.to_string())
         );
         let header_widget = Paragraph::new(Line::from(vec![Span::styled(
@@ -319,7 +306,7 @@ mod tests {
     #[test]
     fn test_convert_filename() {
         let mut app = App::new();
-        app.set_selected_vendor(Some(VendorSelection::Ruibio));
+        app.set_selected_vendor(Some(Vendor::Ruibio));
         let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
         app.add_filenames(vec![filename.clone()]);
         let converted = app.filenames_string_to_sanger();
@@ -339,7 +326,7 @@ mod tests {
     #[test]
     fn test_get_primer_names() {
         let mut app = App::new();
-        app.set_selected_vendor(Some(VendorSelection::Ruibio));
+        app.set_selected_vendor(Some(Vendor::Ruibio));
         let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
         app.add_filenames(vec![filename.clone()]);
         app.filenames_string_to_sanger().unwrap();
