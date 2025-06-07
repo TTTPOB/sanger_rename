@@ -41,7 +41,6 @@ impl VendorExt for Vendor {
 
 pub struct App {
     pub should_quit: bool,
-    pub quit_without_selection: bool,
     pub stage: Stage,
     sanger_fns: Rc<Mutex<SangerFilenames>>,
     str_fns: StrFilenames,
@@ -55,7 +54,6 @@ impl Default for App {
     fn default() -> App {
         App {
             should_quit: false,
-            quit_without_selection: false,
             stage: Stage::VendorSelection,
             sanger_fns: Rc::new(Mutex::new(SangerFilenames {
                 filenames: Vec::new(),
