@@ -22,6 +22,8 @@ pub enum Stage {
 pub struct SangerFilenames {
     pub filenames: Vec<SangerFilename>,
 }
+
+#[allow(dead_code)]
 impl SangerFilenames {
     pub fn new() -> Self {
         Self {
