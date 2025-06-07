@@ -15,6 +15,7 @@ pub enum Stage {
     PrimerRename,
     TemplateRename,
     DateSelection,
+    ConfirmRename,
 }
 
 pub struct SangerFilenames {

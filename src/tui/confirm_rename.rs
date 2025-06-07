@@ -2,11 +2,11 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
-    layout::{Constraint, Layout, Margin, Rect},
+    layout::{Alignment, Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
     text::{Line, Text},
     widgets::{
-        Block, Borders, Paragraph,
+        Block, Borders, Padding, Paragraph,
         calendar::{CalendarEventStore, Monthly},
     },
 };
@@ -14,14 +14,16 @@ use std::{io::Stdout, rc::Rc, sync::Mutex};
 use time::ext::NumericalDuration;
 use time::{Date, Month, OffsetDateTime};
 
-use crate::tui::{App, SangerFilenames, common::StageTransition};
+use crate::tui::{App, SangerFilenames};
 
-pub struct DateSelectionStage {
+use super::common::StageTransition;
+
+pub struct ConfirmRenameStage {
     pub selected_date: Date,
     pub sanger_fns: Rc<Mutex<SangerFilenames>>,
 }
 
-impl DateSelectionStage {
+impl ConfirmRenameStage {
     pub fn init() -> Self {
         Self {
             selected_date: OffsetDateTime::now_local().unwrap().date(),
@@ -64,8 +66,12 @@ impl DateSelectionStage {
                 self.selected_date += 1.days();
                 StageTransition::Stay
             }
-            KeyCode::Char('n') | KeyCode::Tab => StageTransition::Next(super::Stage::ConfirmRename),
+            KeyCode::Char('n') | KeyCode::Tab => {
+                self.selected_date = self.next_month(self.selected_date);
+                StageTransition::Stay
+            }
             KeyCode::Char('p') | KeyCode::BackTab => {
+                self.selected_date = self.prev_month(self.selected_date);
                 StageTransition::Previous(super::Stage::TemplateRename)
             }
             _ => StageTransition::Stay,
@@ -121,7 +127,7 @@ impl DateSelectionStage {
                     .split(frame.area());
 
             // Render the three-month calendar on the left
-            self.render_calendar(frame, chunks[0], &events);
+            self.render_notice(frame, chunks[0], &events);
 
             App::render_rename_preview_table(frame, chunks[1], &self.sanger_fns);
         })?;
@@ -129,44 +135,19 @@ impl DateSelectionStage {
         Ok(())
     }
 
-    fn render_calendar(&self, frame: &mut Frame, area: Rect, events: &CalendarEventStore) {
-        let area = area.inner(Margin {
-            vertical: 1,
-            horizontal: 1,
-        });
+    fn render_notice(&self, frame: &mut Frame, area: Rect, events: &CalendarEventStore) {
+        let block = Block::default()
+            .title("Confirm Rename")
+            .title_alignment(ratatui::layout::Alignment::Center)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Cyan))
+            .padding(Padding::new(0, 0, area.height / 3, 0));
+        let p = Paragraph::new(Text::from(Line::from(
+            "Press 'Shift + Enter' to confirm renaming",
+        )))
+        .block(block)
+        .alignment(Alignment::Center);
 
-        // Split into 3 rows for last month, current month, and next month
-        let rows = Layout::vertical([
-            Constraint::Ratio(1, 3),
-            Constraint::Ratio(1, 3),
-            Constraint::Ratio(1, 3),
-        ])
-        .split(area);
-
-        // Previous month
-        let prev_month_date = self.prev_month(self.selected_date);
-        let prev_calendar = Monthly::new(prev_month_date, events)
-            .default_style(Style::new().dim())
-            .show_month_header(Style::new().bold().yellow())
-            .show_weekdays_header(Style::new().bold().green())
-            .show_surrounding(Style::new().dim());
-        frame.render_widget(prev_calendar, rows[0]);
-
-        // Current month (highlighted)
-        let current_calendar = Monthly::new(self.selected_date, events)
-            .default_style(Style::new().bold().bg(Color::Rgb(30, 30, 30)))
-            .show_month_header(Style::new().bold().cyan())
-            .show_weekdays_header(Style::new().bold().green())
-            .show_surrounding(Style::new().dim());
-        frame.render_widget(current_calendar, rows[1]);
-
-        // Next month
-        let next_month_date = self.next_month(self.selected_date);
-        let next_calendar = Monthly::new(next_month_date, events)
-            .default_style(Style::new().dim())
-            .show_month_header(Style::new().bold().yellow())
-            .show_weekdays_header(Style::new().bold().green())
-            .show_surrounding(Style::new().dim());
-        frame.render_widget(next_calendar, rows[2]);
+        frame.render_widget(p, area);
     }
 }

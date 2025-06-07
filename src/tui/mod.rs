@@ -12,12 +12,14 @@ use std::sync::Mutex;
 use strum::IntoEnumIterator;
 
 pub mod common;
+pub mod confirm_rename;
 pub mod date_selection;
 pub mod primer_rename;
 pub mod template_rename;
 pub mod vendor_selection;
 
 pub use common::{SangerFilenames, Stage, StageTransition, StrFilenames};
+pub use confirm_rename::ConfirmRenameStage;
 pub use date_selection::DateSelectionStage;
 pub use primer_rename::PrimerRenameStage;
 pub use template_rename::TemplateRenameStage;
@@ -48,6 +50,7 @@ pub struct App {
     primer_rename: PrimerRenameStage,
     template_rename: TemplateRenameStage,
     date_selection: DateSelectionStage,
+    confirm_rename: ConfirmRenameStage,
 }
 
 impl Default for App {
@@ -65,6 +68,7 @@ impl Default for App {
             primer_rename: PrimerRenameStage::init(),
             template_rename: TemplateRenameStage::init(),
             date_selection: DateSelectionStage::init(),
+            confirm_rename: ConfirmRenameStage::init(),
         }
     }
 }
@@ -153,6 +157,10 @@ impl App {
                         let sanger_fns = Rc::clone(&self.sanger_fns);
                         self.date_selection = DateSelectionStage::from_sanger_fns(sanger_fns);
                     }
+                    Stage::ConfirmRename => {
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.confirm_rename = ConfirmRenameStage::from_sanger_fns(sanger_fns);
+                    }
                     _ => {}
                 }
             }
@@ -174,6 +182,11 @@ impl App {
                         let sanger_fns = Rc::clone(&self.sanger_fns);
                         self.date_selection = DateSelectionStage::from_sanger_fns(sanger_fns);
                     }
+                    Stage::ConfirmRename => {
+                        unreachable!(
+                            "ConfirmRename stage should not be able to be reached in this direction"
+                        );
+                    }
                 }
             }
             StageTransition::Quit => self.should_quit = true,
@@ -188,6 +201,7 @@ impl App {
             Stage::PrimerRename => self.primer_rename.handle_key(key),
             Stage::DateSelection => self.date_selection.handle_key(key),
             Stage::TemplateRename => self.template_rename.handle_key(key),
+            Stage::ConfirmRename => self.confirm_rename.handle_key(key),
         };
         self.handle_stage_transition(transition);
     }
@@ -266,6 +280,9 @@ impl App {
                 }
                 Stage::DateSelection => {
                     self.date_selection_page(&mut term)?;
+                }
+                Stage::ConfirmRename => {
+                    self.confirm_rename.render(&mut term)?;
                 }
             }
             if let Some(ev) = event::read()?.as_key_press_event() {
