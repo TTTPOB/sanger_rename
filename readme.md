@@ -26,7 +26,7 @@ The TUI will guide you through:
 3. Date selection
 4. Confirmation before renaming
 
-## Windows Send To Context Menu
+## Windows "Send To" Context Menu
 
 For easy access, add this to your Windows "Send To" menu:
 
