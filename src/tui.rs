@@ -254,6 +254,14 @@ impl PrimerRenameStage {
                             self.current_input = existing_name.clone();
                         }
                     }
+                    for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter() {
+                        if let Some(primer_name) = self.rename_map.get(&sanger_fn.get_primer_name())
+                        {
+                            if primer_name.is_some() {
+                                self.current_input = primer_name.clone().unwrap_or_default();
+                            }
+                        }
+                    }
                     StageTransition::Stay
                 }
                 KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
@@ -315,7 +323,7 @@ impl PrimerRenameStage {
             let mut rows = vec![];
             for sf in self.sanger_fns.lock().unwrap().filenames.iter() {
                 let original_name = sf.show_file_name();
-                let standardized_name = format!("{}.ab1", sf.get_standardized_name(None));
+                let standardized_name = format!("{}.ab1", sf.get_standardized_name());
                 rows.push(Row::new([original_name, standardized_name]));
             }
 

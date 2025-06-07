@@ -1,5 +1,6 @@
 use std::str::FromStr;
 use strum::EnumIter;
+use time::{UtcOffset, macros::datetime};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, EnumIter)]
 pub enum Vendor {
@@ -162,8 +163,17 @@ impl SangerFilename {
         Ok(())
     }
 
-    pub fn get_standardized_name(&self, date: Option<time::Date>) -> String {
-        let date = date.unwrap_or_else(|| time::OffsetDateTime::now_utc().date());
+    pub fn get_standardized_name(&self) -> String {
+        // if date is None, use today
+        let current_time = time::OffsetDateTime::now_local().unwrap();
+        let date = self.date.unwrap_or_else(|| {
+            time::Date::from_calendar_date(
+                current_time.year(),
+                current_time.month(),
+                current_time.day(),
+            )
+            .expect("Failed to get current date")
+        });
         let template_name = self.get_template_name();
         let primer_name = self.get_primer_name();
         // date of 2025 12m 06d to 251206
@@ -315,9 +325,11 @@ mod tests {
     #[test]
     fn test_sangon_standardized_name() {
         let filename = "0001_31225060307072_(TXPCR)_[SP1].ab1";
-        let sangon_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
-        let date = datetime!(2025-06-01 00:00:00 +8);
-        let standardized_name = sangon_sanger_fn.get_standardized_name(Some(date.date()));
+        let mut sangon_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
+        let date = time::Date::from_calendar_date(2025, time::Month::June, 1)
+            .expect("Failed to create date");
+        sangon_sanger_fn.set_date(date);
+        let standardized_name = sangon_sanger_fn.get_standardized_name();
         assert_eq!(standardized_name, "250601.TXPCR.SP1");
     }
 
@@ -336,9 +348,11 @@ mod tests {
     #[test]
     fn test_ruibio_standardized_name() {
         let filename = "K528-1.C1.34781340.B08.ab1";
-        let ruibio_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Ruibio);
-        let date = datetime!(2025-12-06 00:00:00 +8);
-        let standardized_name = ruibio_sanger_fn.get_standardized_name(Some(date.date()));
+        let mut ruibio_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Ruibio);
+        let date = time::Date::from_calendar_date(2025, time::Month::December, 6)
+            .expect("Failed to create date");
+        ruibio_sanger_fn.set_date(date);
+        let standardized_name = ruibio_sanger_fn.get_standardized_name();
         assert_eq!(standardized_name, "251206.K528-1.C1");
     }
 
