@@ -7,11 +7,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
-use sanger_rename::SangerFilename;
-use sanger_rename::{
-    SangerFilenameVariant, vendors::genewiz::GenewizSangerFilename,
-    vendors::ruibio::RuibioSangerFilename, vendors::sangon::SangonSangerFilename,
-};
+use sanger_rename::{SangerFilename, Vendor};
 use std::fmt::Display;
 use std::io::Stdout;
 use strum::{EnumIter, IntoEnumIterator};
@@ -72,7 +68,7 @@ enum Stage {
 }
 
 struct SangerFilenames {
-    filenames: Vec<SangerFilenameVariant>,
+    filenames: Vec<SangerFilename>,
 }
 struct StrFilenames {
     filenames: Vec<String>,
@@ -114,43 +110,27 @@ impl App {
         }
         let mut primer_names = Vec::new();
         for sangefile in self.sanger_fns.filenames.iter() {
-            match sangefile {
-                SangerFilenameVariant::Sangon(s) => {
-                    primer_names.push(s.get_primer_name());
-                }
-                SangerFilenameVariant::Ruibio(r) => {
-                    primer_names.push(r.get_primer_name());
-                }
-                SangerFilenameVariant::Genewiz(g) => {
-                    primer_names.push(g.get_primer_name());
-                }
-            }
+            primer_names.push(sangefile.get_primer_name());
         }
         Ok(primer_names)
     }
-    pub fn get_sanger_filenames(&self) -> &Vec<SangerFilenameVariant> {
+    pub fn get_sanger_filenames(&self) -> &Vec<SangerFilename> {
         &self.sanger_fns.filenames
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
         for filename in &self.str_fns.filenames {
             match self.vendor_selection_state.selected_vendor {
                 Some(VendorSelection::Sangon) => {
-                    let fns = SangonSangerFilename::from(filename.clone());
-                    self.sanger_fns
-                        .filenames
-                        .push(SangerFilenameVariant::Sangon(fns));
+                    let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
+                    self.sanger_fns.filenames.push(fns);
                 }
                 Some(VendorSelection::Ruibio) => {
-                    let fns = RuibioSangerFilename::from(filename.clone());
-                    self.sanger_fns
-                        .filenames
-                        .push(SangerFilenameVariant::Ruibio(fns));
+                    let fns = SangerFilename::new(filename.clone(), Vendor::Ruibio);
+                    self.sanger_fns.filenames.push(fns);
                 }
                 Some(VendorSelection::Genewiz) => {
-                    let fns = GenewizSangerFilename::from(filename.clone());
-                    self.sanger_fns
-                        .filenames
-                        .push(SangerFilenameVariant::Genewiz(fns));
+                    let fns = SangerFilename::new(filename.clone(), Vendor::Genewiz);
+                    self.sanger_fns.filenames.push(fns);
                 }
                 None => {
                     return Err(anyhow::anyhow!("No vendor selected"));
@@ -325,7 +305,6 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use sanger_rename::SangerFilename;
 
     #[test]
     fn test_add_filenames() {
@@ -337,7 +316,6 @@ mod tests {
         app.add_filenames(fns);
         assert_eq!(app.get_filenames().len(), 2);
     }
-
     #[test]
     fn test_convert_filename() {
         let mut app = App::new();
@@ -350,13 +328,12 @@ mod tests {
             .get_sanger_filenames()
             .get(0)
             .expect("Expected at least one converted filename");
-        match converted_filename {
-            SangerFilenameVariant::Ruibio(r) => {
-                assert_eq!(r.get_full_path(), filename);
-                assert_eq!(r.get_file_stem(), "K528-3.250604-mbp-s3.34810430.D07");
-            }
-            _ => panic!("Expected RuibioSangerFilename variant"),
-        }
+        assert_eq!(converted_filename.get_full_path(), filename);
+        assert_eq!(
+            converted_filename.get_file_stem(),
+            "K528-3.250604-mbp-s3.34810430.D07"
+        );
+        assert_eq!(converted_filename.get_vendor_name(), "Ruibio");
     }
 
     #[test]
