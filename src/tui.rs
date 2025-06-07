@@ -50,6 +50,9 @@ struct VendorSelectionStage {
 struct PrimerRenameStage {
     sanger_fns: Rc<Mutex<SangerFilenames>>,
     rename_map: HashMap<String, Option<String>>,
+    highlighted: usize,
+    editing: bool,
+    current_input: String,
 }
 
 struct DateSelectionStage {
@@ -175,13 +178,16 @@ impl PrimerRenameStage {
             sanger_fns: Rc::new(Mutex::new(SangerFilenames {
                 filenames: Vec::new(),
             })),
+            highlighted: 0,
+            editing: false,
+            current_input: String::new(),
         }
     }
-    pub fn new(sanger_fns: Rc<Mutex<SangerFilenames>>) -> Self {
-        Self {
-            rename_map: HashMap::new(),
-            sanger_fns: sanger_fns.clone(),
-        }
+    pub fn from_sanger_fns(sanger_fns: Rc<Mutex<SangerFilenames>>) -> Self {
+        let mut s = Self::init();
+        s.sanger_fns = sanger_fns.clone();
+        s.fill_names();
+        s
     }
     pub fn fill_names(&mut self) {
         let sanger_fns = self.sanger_fns.lock().unwrap();
@@ -198,14 +204,138 @@ impl PrimerRenameStage {
         if key.kind != KeyEventKind::Press {
             return StageTransition::Stay;
         }
-        match key.code {
-            KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-            // Add more key handling as needed
-            _ => StageTransition::Stay,
+
+        if self.editing {
+            match key.code {
+                KeyCode::Enter => {
+                    // Save the current input as the new name
+                    let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
+                    if let Some(primer_name) = primer_names.get(self.highlighted) {
+                        let new_name = if self.current_input.is_empty() {
+                            None
+                        } else {
+                            Some(self.current_input.clone())
+                        };
+                        self.set_rename(primer_name.clone(), new_name);
+                    }
+                    self.editing = false;
+                    self.current_input.clear();
+                    StageTransition::Stay
+                }
+                KeyCode::Esc => {
+                    self.editing = false;
+                    self.current_input.clear();
+                    StageTransition::Stay
+                }
+                KeyCode::Backspace => {
+                    self.current_input.pop();
+                    StageTransition::Stay
+                }
+                KeyCode::Char(c) => {
+                    self.current_input.push(c);
+                    StageTransition::Stay
+                }
+                _ => StageTransition::Stay,
+            }
+        } else {
+            match key.code {
+                KeyCode::Up => {
+                    if self.highlighted > 0 {
+                        self.highlighted -= 1;
+                    }
+                    StageTransition::Stay
+                }
+                KeyCode::Down => {
+                    if self.highlighted < self.rename_map.len().saturating_sub(1) {
+                        self.highlighted += 1;
+                    }
+                    StageTransition::Stay
+                }
+                KeyCode::Enter => {
+                    self.editing = true;
+                    // Pre-fill with existing name if any
+                    let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
+                    if let Some(primer_name) = primer_names.get(self.highlighted) {
+                        if let Some(existing_name) = &self.rename_map[primer_name] {
+                            self.current_input = existing_name.clone();
+                        }
+                    }
+                    StageTransition::Stay
+                }
+                KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
+                KeyCode::Tab => StageTransition::Next(Stage::DateSelection),
+                _ => StageTransition::Stay,
+            }
         }
     }
-    pub fn render(&self, _terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        // Placeholder for primer rename page logic
+    pub fn render(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
+        let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
+
+        terminal.draw(|f| {
+            let chunks =
+                Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
+                    .split(f.area());
+
+            // Left panel: Primer names with rename inputs
+            let left_items: Vec<Line> = primer_names
+                .iter()
+                .enumerate()
+                .map(|(i, name)| {
+                    let is_highlighted = i == self.highlighted;
+                    let new_name = self.rename_map.get(name).and_then(|n| n.as_ref());
+
+                    let display_text = if self.editing && is_highlighted {
+                        format!("{} -> {}_", name, self.current_input)
+                    } else if let Some(new_name) = new_name {
+                        format!("{} -> {}", name, new_name)
+                    } else {
+                        format!("{} -> <not set>", name)
+                    };
+
+                    let style = if is_highlighted {
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default()
+                    };
+
+                    Line::from(vec![
+                        Span::styled(if is_highlighted { ">> " } else { "   " }, style),
+                        Span::styled(display_text, style),
+                    ])
+                })
+                .collect();
+
+            let left_block = Block::default()
+                .borders(Borders::ALL)
+                .title("Primer Names (Enter to edit, Tab to continue)");
+            let left_paragraph = Paragraph::new(left_items)
+                .block(left_block)
+                .wrap(ratatui::widgets::Wrap { trim: true });
+            // Right panel: Sanger filenames for reference
+            let sanger_fns = self.sanger_fns.lock().unwrap();
+            let right_items: Vec<Line> = sanger_fns
+                .filenames
+                .iter()
+                .map(|sf| {
+                    Line::from(vec![Span::raw(format!(
+                        "{}: {}",
+                        sf.get_primer_name(),
+                        sf.get_file_stem()
+                    ))])
+                })
+                .collect();
+
+            let right_block = Block::default().borders(Borders::ALL).title("Sanger Files");
+            let right_paragraph = Paragraph::new(right_items)
+                .block(right_block)
+                .wrap(ratatui::widgets::Wrap { trim: true });
+
+            f.render_widget(left_paragraph, chunks[0]);
+            f.render_widget(right_paragraph, chunks[1]);
+        })?;
+
         Ok(())
     }
 }
@@ -369,8 +499,9 @@ impl App {
                 self.stage = stage;
                 match self.stage {
                     Stage::PrimerRename => {
+                        self.filenames_string_to_sanger().unwrap();
                         let sanger_fns = Rc::clone(&self.sanger_fns);
-                        self.primer_rename = PrimerRenameStage::new(sanger_fns);
+                        self.primer_rename = PrimerRenameStage::from_sanger_fns(sanger_fns);
                     }
                     Stage::DateSelection => {
                         self.date_selection = DateSelectionStage::new();
@@ -465,6 +596,17 @@ mod tests {
         ].iter().map(|s| s.to_string()).collect::<Vec<String>>();
         app.add_filenames(fns);
         assert_eq!(app.get_filenames().len(), 2);
+    }
+    #[test]
+    fn test_name_convert() {
+        let mut app = App::new();
+        app.set_selected_vendor(Some(Vendor::Ruibio));
+        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
+        app.add_filenames(vec![filename.clone()]);
+        let converted = app.filenames_string_to_sanger();
+        assert!(converted.is_ok());
+        let sanger_fns = app.get_sanger_filenames();
+        assert_eq!(sanger_fns.len(), 1);
     }
     #[test]
     fn test_convert_filename() {
