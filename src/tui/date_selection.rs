@@ -25,9 +25,7 @@ impl DateSelectionStage {
     pub fn init() -> Self {
         Self {
             selected_date: OffsetDateTime::now_local().unwrap().date(),
-            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
-                filenames: Vec::new(),
-            })),
+            sanger_fns: Rc::new(Mutex::new(SangerFilenames::new())),
         }
     }
     pub fn from_sanger_fns(sanger_fns: Rc<Mutex<SangerFilenames>>) -> Self {

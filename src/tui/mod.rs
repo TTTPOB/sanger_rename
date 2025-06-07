@@ -58,9 +58,7 @@ impl Default for App {
         App {
             should_quit: false,
             stage: Stage::VendorSelection,
-            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
-                filenames: Vec::new(),
-            })),
+            sanger_fns: Rc::new(Mutex::new(SangerFilenames::new())),
             str_fns: StrFilenames {
                 filenames: Vec::new(),
             },

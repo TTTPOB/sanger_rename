@@ -11,8 +11,7 @@ use ratatui::{
     },
 };
 use std::{io::Stdout, rc::Rc, sync::Mutex};
-use time::ext::NumericalDuration;
-use time::{Date, Month, OffsetDateTime};
+use time::{Date, OffsetDateTime};
 
 use crate::tui::{App, SangerFilenames};
 
@@ -29,9 +28,7 @@ impl ConfirmRenameStage {
         Self {
             selected_date: OffsetDateTime::now_local().unwrap().date(),
             renamed: false,
-            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
-                filenames: Vec::new(),
-            })),
+            sanger_fns: Rc::new(Mutex::new(SangerFilenames::new())),
         }
     }
     pub fn from_sanger_fns(sanger_fns: Rc<Mutex<SangerFilenames>>) -> Self {

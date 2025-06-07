@@ -25,9 +25,7 @@ impl TemplateRenameStage {
     pub fn init() -> Self {
         Self {
             rename_map: HashMap::new(),
-            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
-                filenames: Vec::new(),
-            })),
+            sanger_fns: Rc::new(Mutex::new(SangerFilenames::new())),
             highlighted: 0,
             editing: false,
             current_input: String::new(),

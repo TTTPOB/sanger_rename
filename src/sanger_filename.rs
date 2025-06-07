@@ -1,6 +1,5 @@
-use std::{any, str::FromStr};
+use std::str::FromStr;
 use strum::EnumIter;
-use time::{UtcOffset, macros::datetime};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, EnumIter)]
 pub enum Vendor {
@@ -326,7 +325,6 @@ impl From<(&str, Vendor)> for SangerFilename {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use time::macros::datetime;
 
     #[test]
     fn test_sangon_extraction() {
@@ -346,7 +344,7 @@ mod tests {
         let mut sangon_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
         let date = time::Date::from_calendar_date(2025, time::Month::June, 1)
             .expect("Failed to create date");
-        sangon_sanger_fn.set_date(date);
+        sangon_sanger_fn.set_date(date).unwrap();
         let standardized_name = sangon_sanger_fn.get_standardized_name();
         assert_eq!(standardized_name, "250601.TXPCR.SP1");
     }
@@ -369,7 +367,7 @@ mod tests {
         let mut ruibio_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Ruibio);
         let date = time::Date::from_calendar_date(2025, time::Month::December, 6)
             .expect("Failed to create date");
-        ruibio_sanger_fn.set_date(date);
+        ruibio_sanger_fn.set_date(date).unwrap();
         let standardized_name = ruibio_sanger_fn.get_standardized_name();
         assert_eq!(standardized_name, "251206.K528-1.C1");
     }

@@ -33,12 +33,6 @@ impl SangerFilenames {
             self.filenames.push(filename);
         }
     }
-
-    pub fn add_filenames(&mut self, filenames: Vec<SangerFilename>) {
-        for filename in filenames {
-            self.add_filename(filename);
-        }
-    }
 }
 
 pub struct StrFilenames {
