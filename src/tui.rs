@@ -8,8 +8,9 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use sanger_rename::{SangerFilename, Vendor};
-use std::collections::HashMap;
 use std::io::Stdout;
+use std::sync::Mutex;
+use std::{collections::HashMap, rc::Rc};
 use strum::IntoEnumIterator;
 
 // Extension trait for additional TUI-specific methods on Vendor
@@ -32,7 +33,7 @@ pub struct App {
     pub should_quit: bool,
     pub quit_without_selection: bool,
     pub stage: Stage,
-    sanger_fns: SangerFilenames,
+    sanger_fns: Rc<Mutex<SangerFilenames>>,
     str_fns: StrFilenames,
     vendor_selection: VendorSelectionStage,
     primer_rename: PrimerRenameStage,
@@ -270,9 +271,9 @@ impl Default for App {
             should_quit: false,
             quit_without_selection: false,
             stage: Stage::VendorSelection,
-            sanger_fns: SangerFilenames {
+            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
                 filenames: Vec::new(),
-            },
+            })),
             str_fns: StrFilenames {
                 filenames: Vec::new(),
             },
@@ -302,28 +303,29 @@ impl App {
             return Err(anyhow::anyhow!("Not in primer rename stage"));
         }
         let mut primer_names = Vec::new();
-        for sangefile in self.sanger_fns.filenames.iter() {
-            primer_names.push(sangefile.get_primer_name());
+        for sanger_file in self.sanger_fns.lock().unwrap().filenames.iter() {
+            primer_names.push(sanger_file.get_primer_name());
         }
         Ok(primer_names)
     }
-    pub fn get_sanger_filenames(&self) -> &Vec<SangerFilename> {
-        &self.sanger_fns.filenames
+    pub fn get_sanger_filenames(&self) -> Vec<SangerFilename> {
+        let v = self.sanger_fns.lock().unwrap().filenames.clone();
+        v
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
         for filename in &self.str_fns.filenames {
             match self.vendor_selection.selected_vendor {
                 Some(Vendor::Sangon) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
-                    self.sanger_fns.filenames.push(fns);
+                    self.sanger_fns.lock().unwrap().filenames.push(fns);
                 }
                 Some(Vendor::Ruibio) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Ruibio);
-                    self.sanger_fns.filenames.push(fns);
+                    self.sanger_fns.lock().unwrap().filenames.push(fns);
                 }
                 Some(Vendor::Genewiz) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Genewiz);
-                    self.sanger_fns.filenames.push(fns);
+                    self.sanger_fns.lock().unwrap().filenames.push(fns);
                 }
                 None => {
                     return Err(anyhow::anyhow!("No vendor selected"));
@@ -446,8 +448,8 @@ mod tests {
         app.add_filenames(vec![filename.clone()]);
         let converted = app.filenames_string_to_sanger();
         assert!(converted.is_ok());
-        let converted_filename = app
-            .get_sanger_filenames()
+        let sanger_fns = app.get_sanger_filenames();
+        let converted_filename = sanger_fns
             .get(0)
             .expect("Expected at least one converted filename");
         assert_eq!(converted_filename.get_full_path(), filename);
