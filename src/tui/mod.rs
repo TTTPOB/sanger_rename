@@ -103,15 +103,15 @@ impl App {
             match self.vendor_selection.get_selected_vendor() {
                 Some(Vendor::Sangon) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
-                    self.sanger_fns.lock().unwrap().filenames.push(fns);
+                    self.sanger_fns.lock().unwrap().add_filename(fns);
                 }
                 Some(Vendor::Ruibio) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Ruibio);
-                    self.sanger_fns.lock().unwrap().filenames.push(fns);
+                    self.sanger_fns.lock().unwrap().add_filename(fns);
                 }
                 Some(Vendor::Genewiz) => {
                     let fns = SangerFilename::new(filename.clone(), Vendor::Genewiz);
-                    self.sanger_fns.lock().unwrap().filenames.push(fns);
+                    self.sanger_fns.lock().unwrap().add_filename(fns);
                 }
                 None => {
                     return Err(anyhow::anyhow!("No vendor selected"));
@@ -368,7 +368,6 @@ mod tests {
         app.filenames_string_to_sanger().unwrap();
         app.handle_stage_transition(StageTransition::Next(Stage::PrimerRename));
         assert_eq!(app.stage, Stage::PrimerRename);
-        app.primer_rename.fill_names();
         let primer_names = app
             .primer_rename
             .rename_map
