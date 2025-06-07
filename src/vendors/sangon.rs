@@ -37,6 +37,9 @@ impl SangerFilename for SangonSangerFilename {
         self.filename.clone()
     }
     fn get_template_name(&self) -> String {
+        if !self.template_name.is_empty() {
+            return self.template_name.clone();
+        }
         // Extract template name from pattern like "0001_31225060307072_(TXPCR)_[SP1]"
         if let Some(start) = self.filename.find('(') {
             if let Some(end) = self.filename.find(')') {
@@ -49,6 +52,9 @@ impl SangerFilename for SangonSangerFilename {
     }
 
     fn get_primer_name(&self) -> String {
+        if !self.primer_name.is_empty() {
+            return self.primer_name.clone();
+        }
         let filestem = self.get_file_stem();
         // Extract primer name from pattern like "0001_31225060307072_(TXPCR)_[SP1]"
         if let Some(start) = filestem.find('[') {

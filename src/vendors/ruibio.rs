@@ -37,6 +37,9 @@ impl SangerFilename for RuibioSangerFilename {
         self.filename.clone()
     }
     fn get_template_name(&self) -> String {
+        if !self.template_name.is_empty() {
+            return self.template_name.clone();
+        }
         // Extract template name from pattern like "K528-1.C1.34781340.B08"
         // Template is everything before the first dot
         if let Some(first_dot) = self.filename.find('.') {
@@ -58,6 +61,9 @@ impl SangerFilename for RuibioSangerFilename {
     }
 
     fn get_primer_name(&self) -> String {
+        if !self.primer_name.is_empty() {
+            return self.primer_name.clone();
+        }
         let filestem = self.get_file_stem();
         // Extract primer name from pattern like "K528-1.C1.34781340.B08"
         // Primer is between first and second dot

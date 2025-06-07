@@ -37,6 +37,9 @@ impl SangerFilename for GenewizSangerFilename {
         self.filename.clone()
     }
     fn get_template_name(&self) -> String {
+        if !self.template_name.is_empty() {
+            return self.template_name.clone();
+        }
         let filestem = self.get_file_stem();
         // Extract template name from pattern like "TL1-T25_A01" or "k1-2-C1_R_G04"
         // Find the last underscore to locate the vendor ID
@@ -62,6 +65,9 @@ impl SangerFilename for GenewizSangerFilename {
         Ok(())
     }
     fn get_primer_name(&self) -> String {
+        if !self.primer_name.is_empty() {
+            return self.primer_name.clone();
+        }
         let filestem = self.get_file_stem();
         // Extract primer name from pattern like "TL1-T25_A01" or "k1-2-C1_R_G04"
         // Find the last underscore to locate the vendor ID
