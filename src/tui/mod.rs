@@ -14,11 +14,13 @@ use strum::IntoEnumIterator;
 pub mod common;
 pub mod date_selection;
 pub mod primer_rename;
+pub mod template_rename;
 pub mod vendor_selection;
 
 pub use common::{SangerFilenames, Stage, StageTransition, StrFilenames};
 pub use date_selection::DateSelectionStage;
 pub use primer_rename::PrimerRenameStage;
+pub use template_rename::TemplateRenameStage;
 pub use vendor_selection::VendorSelectionStage;
 
 // Extension trait for additional TUI-specific methods on Vendor
@@ -45,6 +47,7 @@ pub struct App {
     str_fns: StrFilenames,
     vendor_selection: VendorSelectionStage,
     primer_rename: PrimerRenameStage,
+    template_rename: TemplateRenameStage,
     date_selection: DateSelectionStage,
 }
 
@@ -62,6 +65,7 @@ impl Default for App {
             },
             vendor_selection: VendorSelectionStage::new(),
             primer_rename: PrimerRenameStage::init(),
+            template_rename: TemplateRenameStage::init(),
             date_selection: DateSelectionStage::new(),
         }
     }
@@ -143,6 +147,10 @@ impl App {
                         let sanger_fns = Rc::clone(&self.sanger_fns);
                         self.primer_rename = PrimerRenameStage::from_sanger_fns(sanger_fns);
                     }
+                    Stage::TemplateRename => {
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.template_rename = TemplateRenameStage::from_sanger_fns(sanger_fns);
+                    }
                     Stage::DateSelection => {
                         self.date_selection = DateSelectionStage::new();
                     }
@@ -161,6 +169,7 @@ impl App {
             Stage::VendorSelection => self.vendor_selection.handle_key(key),
             Stage::PrimerRename => self.primer_rename.handle_key(key),
             Stage::DateSelection => self.date_selection.handle_key(key),
+            Stage::TemplateRename => self.template_rename.handle_key(key),
         };
         self.handle_stage_transition(transition);
     }
@@ -175,6 +184,12 @@ impl App {
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
         self.primer_rename.render(terminal)
+    }
+    pub fn template_rename_page(
+        &mut self,
+        terminal: &mut Terminal<CrosstermBackend<Stdout>>,
+    ) -> anyhow::Result<()> {
+        self.template_rename.render(terminal)
     }
     pub fn date_selection_page(
         &mut self,
@@ -227,6 +242,9 @@ impl App {
                 }
                 Stage::PrimerRename => {
                     self.primer_rename_page(&mut term)?;
+                }
+                Stage::TemplateRename => {
+                    self.template_rename_page(&mut term)?;
                 }
                 Stage::DateSelection => {
                     self.date_selection_page(&mut term)?;

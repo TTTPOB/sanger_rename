@@ -13,7 +13,7 @@ use std::{collections::HashMap, rc::Rc};
 
 use super::common::{SangerFilenames, Stage, StageTransition};
 
-pub struct PrimerRenameStage {
+pub struct TemplateRenameStage {
     pub sanger_fns: Rc<Mutex<SangerFilenames>>,
     pub rename_map: HashMap<String, Option<String>>,
     pub highlighted: usize,
@@ -21,7 +21,7 @@ pub struct PrimerRenameStage {
     pub current_input: String,
 }
 
-impl PrimerRenameStage {
+impl TemplateRenameStage {
     pub fn init() -> Self {
         Self {
             rename_map: HashMap::new(),
@@ -42,12 +42,12 @@ impl PrimerRenameStage {
     pub fn fill_names(&mut self) {
         let sanger_fns = self.sanger_fns.lock().unwrap();
         for sanger_fn in sanger_fns.filenames.iter() {
-            let primer_name = sanger_fn.get_primer_name();
-            self.rename_map.insert(primer_name.clone(), None);
+            let template_name = sanger_fn.get_template_name();
+            self.rename_map.insert(template_name.clone(), None);
         }
     }
-    pub fn set_rename(&mut self, primer_name: String, new_name: Option<String>) {
-        self.rename_map.insert(primer_name, new_name);
+    pub fn set_rename(&mut self, template_name: String, new_name: Option<String>) {
+        self.rename_map.insert(template_name, new_name);
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
@@ -59,20 +59,20 @@ impl PrimerRenameStage {
             match key.code {
                 KeyCode::Enter => {
                     // Save the current input as the new name
-                    let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
-                    if let Some(primer_name) = primer_names.get(self.highlighted) {
+                    let template_names: Vec<String> = self.rename_map.keys().cloned().collect();
+                    if let Some(template_name) = template_names.get(self.highlighted) {
                         let new_name = if self.current_input.is_empty() {
                             None
                         } else {
                             Some(self.current_input.clone())
                         };
-                        self.set_rename(primer_name.clone(), new_name);
+                        self.set_rename(template_name.clone(), new_name);
                     }
                     for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter_mut() {
-                        let old_primer_name = sanger_fn.get_primer_name();
-                        if let Some(new_name) = self.rename_map.get(&old_primer_name) {
+                        let old_template_name = sanger_fn.get_template_name();
+                        if let Some(new_name) = self.rename_map.get(&old_template_name) {
                             if let Some(new_name_str) = new_name {
-                                sanger_fn.set_primer_name(new_name_str).unwrap();
+                                sanger_fn.set_template_name(new_name_str).unwrap();
                             }
                         }
                     }
@@ -112,32 +112,32 @@ impl PrimerRenameStage {
                 KeyCode::Enter => {
                     self.editing = true;
                     // Pre-fill with existing name if any
-                    let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
-                    if let Some(primer_name) = primer_names.get(self.highlighted) {
-                        if let Some(existing_name) = &self.rename_map[primer_name] {
+                    let template_names: Vec<String> = self.rename_map.keys().cloned().collect();
+                    if let Some(template_name) = template_names.get(self.highlighted) {
+                        if let Some(existing_name) = &self.rename_map[template_name] {
                             self.current_input = existing_name.clone();
                         }
                     }
                     StageTransition::Stay
                 }
                 KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-                KeyCode::Tab => StageTransition::Next(Stage::TemplateRename),
+                KeyCode::Tab => StageTransition::Next(Stage::DateSelection),
                 _ => StageTransition::Stay,
             }
         }
     }
     pub fn render(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        let primer_names: Vec<String> = self.rename_map.keys().cloned().collect();
+        let template_names: Vec<String> = self.rename_map.keys().cloned().collect();
 
         terminal.draw(|f| {
             let chunks = Layout::horizontal([
-                Constraint::Percentage(50), // Left panel: Primer names with rename inputs
+                Constraint::Percentage(50), // Left panel: template names with rename inputs
                 Constraint::Percentage(50), // Right panel: Rename preview table
             ])
             .split(f.area());
 
-            // Left panel: Primer names with rename inputs
-            let left_rows = primer_names
+            // Left panel: template names with rename inputs
+            let left_rows = template_names
                 .iter()
                 .enumerate()
                 .map(|(i, name)| {
@@ -169,13 +169,13 @@ impl PrimerRenameStage {
 
             let left_block = Block::default()
                 .borders(Borders::ALL)
-                .title("Primer Names (Enter to edit, Tab to continue)");
-            let left_header = Row::new(["Primer Name", "-->", "New Name"])
+                .title("Template Names (Enter to edit, Tab to continue)");
+            let left_header = Row::new(["Template Name", "-->", "New Name"])
                 .style(Style::default().add_modifier(Modifier::BOLD));
-            let primer_rename_view = Table::new(left_rows, left_table_width)
+            let template_rename_view = Table::new(left_rows, left_table_width)
                 .header(left_header)
                 .block(left_block);
-            f.render_widget(primer_rename_view, chunks[0]);
+            f.render_widget(template_rename_view, chunks[0]);
             App::render_rename_preview_table(f, chunks[1], &self.sanger_fns);
         })?;
 

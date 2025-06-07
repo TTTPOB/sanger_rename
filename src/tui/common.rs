@@ -13,6 +13,7 @@ pub enum StageTransition {
 pub enum Stage {
     VendorSelection,
     PrimerRename,
+    TemplateRename,
     DateSelection,
 }
 
