@@ -38,7 +38,7 @@ impl DateSelectionStage {
             KeyCode::Enter => {
                 //for all fn set the date
                 for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter_mut() {
-                    sanger_fn.set_date(self.selected_date);
+                    sanger_fn.set_date(self.selected_date).unwrap();
                 }
                 StageTransition::Next(Stage::ConfirmRename)
             }

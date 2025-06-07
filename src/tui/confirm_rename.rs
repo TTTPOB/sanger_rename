@@ -1,23 +1,18 @@
+use crate::tui::{App, SangerFilenames};
 use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Style, Stylize},
+    style::{Color, Style},
     text::{Line, Text},
-    widgets::{
-        Block, Borders, Padding, Paragraph,
-    },
+    widgets::{Block, Borders, Padding, Paragraph},
 };
 use std::{io::Stdout, rc::Rc, sync::Mutex};
-use time::{Date, OffsetDateTime};
-
-use crate::tui::{App, SangerFilenames};
 
 use super::common::StageTransition;
 
 pub struct ConfirmRenameStage {
-    pub selected_date: Date,
     pub renamed: bool,
     pub sanger_fns: Rc<Mutex<SangerFilenames>>,
 }
@@ -25,7 +20,6 @@ pub struct ConfirmRenameStage {
 impl ConfirmRenameStage {
     pub fn init() -> Self {
         Self {
-            selected_date: OffsetDateTime::now_local().unwrap().date(),
             renamed: false,
             sanger_fns: Rc::new(Mutex::new(SangerFilenames::new())),
         }
