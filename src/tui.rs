@@ -8,6 +8,7 @@ use ratatui::{
     widgets::{Block, Borders, Paragraph},
 };
 use sanger_rename::{SangerFilename, Vendor};
+use std::collections::HashMap;
 use std::io::Stdout;
 use strum::IntoEnumIterator;
 
@@ -46,8 +47,7 @@ struct VendorSelectionStage {
 }
 
 struct PrimerRenameStage {
-    // Add fields specific to primer rename stage
-    // For now, keeping it empty as it's not implemented yet
+    rename_map: HashMap<String, Option<String>>,
 }
 
 struct DateSelectionStage {
@@ -168,7 +168,18 @@ impl VendorSelectionStage {
 
 impl PrimerRenameStage {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            rename_map: HashMap::new(),
+        }
+    }
+    pub fn fill_names(&mut self, sanger_fns: &Vec<SangerFilename>) {
+        for sanger_fn in sanger_fns {
+            let primer_name = sanger_fn.get_primer_name();
+            self.rename_map.insert(primer_name.clone(), None);
+        }
+    }
+    pub fn set_rename(&mut self, primer_name: String, new_name: Option<String>) {
+        self.rename_map.insert(primer_name, new_name);
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) -> StageTransition {
