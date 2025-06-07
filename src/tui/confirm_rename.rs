@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, ModifierKeyCode};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -20,6 +20,7 @@ use super::common::StageTransition;
 
 pub struct ConfirmRenameStage {
     pub selected_date: Date,
+    pub renamed: bool,
     pub sanger_fns: Rc<Mutex<SangerFilenames>>,
 }
 
@@ -27,6 +28,7 @@ impl ConfirmRenameStage {
     pub fn init() -> Self {
         Self {
             selected_date: OffsetDateTime::now_local().unwrap().date(),
+            renamed: false,
             sanger_fns: Rc::new(Mutex::new(SangerFilenames {
                 filenames: Vec::new(),
             })),
@@ -43,91 +45,28 @@ impl ConfirmRenameStage {
         }
         match key.code {
             KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
+            // shift + enter to confirm renaming
             KeyCode::Enter => {
-                //for all fn set the date
-                for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter_mut() {
-                    sanger_fn.set_date(self.selected_date);
+                for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter() {
+                    sanger_fn.move_to_standardized_name().unwrap();
                 }
-                StageTransition::Stay // You can change this to move to next stage if needed
-            }
-            KeyCode::Char('h') | KeyCode::Left => {
-                self.selected_date -= 1.days();
-                StageTransition::Stay
-            }
-            KeyCode::Char('j') | KeyCode::Down => {
-                self.selected_date += 1.weeks();
-                StageTransition::Stay
-            }
-            KeyCode::Char('k') | KeyCode::Up => {
-                self.selected_date -= 1.weeks();
-                StageTransition::Stay
-            }
-            KeyCode::Char('l') | KeyCode::Right => {
-                self.selected_date += 1.days();
-                StageTransition::Stay
-            }
-            KeyCode::Char('n') | KeyCode::Tab => {
-                self.selected_date = self.next_month(self.selected_date);
+                self.renamed = true;
                 StageTransition::Stay
             }
             KeyCode::Char('p') | KeyCode::BackTab => {
-                self.selected_date = self.prev_month(self.selected_date);
                 StageTransition::Previous(super::Stage::TemplateRename)
             }
             _ => StageTransition::Stay,
         }
     }
-
-    fn next_month(&self, date: Date) -> Date {
-        if date.month() == Month::December {
-            date.replace_month(Month::January)
-                .unwrap()
-                .replace_year(date.year() + 1)
-                .unwrap()
-        } else {
-            date.replace_month(date.month().next()).unwrap()
-        }
-    }
-
-    fn prev_month(&self, date: Date) -> Date {
-        if date.month() == Month::January {
-            date.replace_month(Month::December)
-                .unwrap()
-                .replace_year(date.year() - 1)
-                .unwrap()
-        } else {
-            date.replace_month(date.month().previous()).unwrap()
-        }
-    }
-
-    fn create_events(&self) -> anyhow::Result<CalendarEventStore> {
-        const SELECTED: Style = Style::new()
-            .fg(Color::White)
-            .bg(Color::Red)
-            .add_modifier(Modifier::BOLD);
-
-        let mut list = CalendarEventStore::today(
-            Style::default()
-                .add_modifier(Modifier::BOLD)
-                .bg(Color::Blue),
-        );
-
-        // Mark the selected date
-        list.add(self.selected_date, SELECTED);
-
-        Ok(list)
-    }
-
     pub fn render(&self, terminal: &mut Terminal<CrosstermBackend<Stdout>>) -> anyhow::Result<()> {
-        let events = self.create_events()?;
-
         terminal.draw(|frame| {
             let chunks =
                 Layout::horizontal([Constraint::Percentage(50), Constraint::Percentage(50)])
                     .split(frame.area());
 
             // Render the three-month calendar on the left
-            self.render_notice(frame, chunks[0], &events);
+            self.render_notice(frame, chunks[0]);
 
             App::render_rename_preview_table(frame, chunks[1], &self.sanger_fns);
         })?;
@@ -135,18 +74,21 @@ impl ConfirmRenameStage {
         Ok(())
     }
 
-    fn render_notice(&self, frame: &mut Frame, area: Rect, events: &CalendarEventStore) {
+    fn render_notice(&self, frame: &mut Frame, area: Rect) {
         let block = Block::default()
             .title("Confirm Rename")
             .title_alignment(ratatui::layout::Alignment::Center)
             .borders(Borders::ALL)
             .border_style(Style::default().fg(Color::Cyan))
             .padding(Padding::new(0, 0, area.height / 3, 0));
-        let p = Paragraph::new(Text::from(Line::from(
-            "Press 'Shift + Enter' to confirm renaming",
-        )))
-        .block(block)
-        .alignment(Alignment::Center);
+        let content = if self.renamed {
+            "Renaming completed successfully!"
+        } else {
+            "Press 'Enter' to confirm renaming"
+        };
+        let p = Paragraph::new(Text::from(Line::from(content)))
+            .block(block)
+            .alignment(Alignment::Center);
 
         frame.render_widget(p, area);
     }
