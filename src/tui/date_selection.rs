@@ -14,7 +14,7 @@ use std::{io::Stdout, rc::Rc, sync::Mutex};
 use time::ext::NumericalDuration;
 use time::{Date, Month, OffsetDateTime};
 
-use crate::tui::{App, SangerFilenames, common::StageTransition};
+use crate::tui::{App, SangerFilenames, Stage, common::StageTransition};
 
 pub struct DateSelectionStage {
     pub selected_date: Date,
@@ -46,7 +46,7 @@ impl DateSelectionStage {
                 for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter_mut() {
                     sanger_fn.set_date(self.selected_date);
                 }
-                StageTransition::Stay // You can change this to move to next stage if needed
+                StageTransition::Next(Stage::ConfirmRename)
             }
             KeyCode::Char('h') | KeyCode::Left => {
                 self.selected_date -= 1.days();
@@ -64,9 +64,9 @@ impl DateSelectionStage {
                 self.selected_date += 1.days();
                 StageTransition::Stay
             }
-            KeyCode::Char('n') | KeyCode::Tab => StageTransition::Next(super::Stage::ConfirmRename),
+            KeyCode::Char('n') | KeyCode::Tab => StageTransition::Next(Stage::ConfirmRename),
             KeyCode::Char('p') | KeyCode::BackTab => {
-                StageTransition::Previous(super::Stage::TemplateRename)
+                StageTransition::Previous(Stage::TemplateRename)
             }
             _ => StageTransition::Stay,
         }
