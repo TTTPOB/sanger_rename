@@ -241,13 +241,13 @@ impl PrimerRenameStage {
             }
         } else {
             match key.code {
-                KeyCode::Up => {
+                KeyCode::Up | KeyCode::Char('k') => {
                     if self.highlighted > 0 {
                         self.highlighted -= 1;
                     }
                     StageTransition::Stay
                 }
-                KeyCode::Down => {
+                KeyCode::Down | KeyCode::Char('j') => {
                     if self.highlighted < self.rename_map.len().saturating_sub(1) {
                         self.highlighted += 1;
                     }
