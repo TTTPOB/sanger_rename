@@ -99,25 +99,11 @@ impl App {
         self.sanger_fns.lock().unwrap().filenames.clone()
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
-        for filename in &self.str_fns.filenames {
-            match self.vendor_selection.get_selected_vendor() {
-                Some(Vendor::Sangon) => {
-                    let fns = SangerFilename::new(filename.clone(), Vendor::Sangon);
-                    self.sanger_fns.lock().unwrap().add_filename(fns);
-                }
-                Some(Vendor::Ruibio) => {
-                    let fns = SangerFilename::new(filename.clone(), Vendor::Ruibio);
-                    self.sanger_fns.lock().unwrap().add_filename(fns);
-                }
-                Some(Vendor::Genewiz) => {
-                    let fns = SangerFilename::new(filename.clone(), Vendor::Genewiz);
-                    self.sanger_fns.lock().unwrap().add_filename(fns);
-                }
-                None => {
-                    return Err(anyhow::anyhow!("No vendor selected"));
-                }
-            }
-        }
+        let vendor = self.vendor_selection.get_selected_vendor();
+        self.sanger_fns = Rc::new(Mutex::new(SangerFilenames::from_str_filenames(
+            self.str_fns.filenames.clone(),
+            vendor.unwrap(),
+        )));
         Ok(())
     }
     pub fn get_selected_vendor(&self) -> Option<Vendor> {

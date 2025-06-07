@@ -42,9 +42,9 @@ pub struct SangerFilename {
 
 impl SangerFilename {
     /// Create a new SangerFilename with the specified vendor
-    pub fn new(filename: String, vendor: Vendor) -> Self {
+    pub fn new(filename: &str, vendor: Vendor) -> Self {
         let mut sanger_filename = SangerFilename {
-            filename,
+            filename: filename.to_string(),
             primer_name: String::new(),
             template_name: String::new(),
             date: None,
@@ -63,11 +63,6 @@ impl SangerFilename {
             .expect("Failed to set template name");
 
         sanger_filename
-    }
-
-    /// Create from filename string with vendor detection
-    pub fn from_filename_with_vendor(filename: String, vendor: Vendor) -> Self {
-        Self::new(filename, vendor)
     }
 
     pub fn get_full_path(&self) -> String {
@@ -312,13 +307,13 @@ impl SangerFilename {
 // Implement From traits for backward compatibility
 impl From<(String, Vendor)> for SangerFilename {
     fn from((filename, vendor): (String, Vendor)) -> Self {
-        Self::new(filename, vendor)
+        Self::new(filename.as_str(), vendor)
     }
 }
 
 impl From<(&str, Vendor)> for SangerFilename {
     fn from((filename, vendor): (&str, Vendor)) -> Self {
-        Self::new(filename.to_string(), vendor)
+        Self::new(filename, vendor)
     }
 }
 
@@ -332,7 +327,7 @@ mod tests {
         let vendor_id = "31225060307072";
         let template_name = "TXPCR";
         let primer_name = "SP1";
-        let sangon_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
+        let sangon_sanger_fn = SangerFilename::new(filename, Vendor::Sangon);
         assert_eq!(sangon_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(sangon_sanger_fn.get_template_name(), template_name);
         assert_eq!(sangon_sanger_fn.get_primer_name(), primer_name);
@@ -341,7 +336,7 @@ mod tests {
     #[test]
     fn test_sangon_standardized_name() {
         let filename = "0001_31225060307072_(TXPCR)_[SP1].ab1";
-        let mut sangon_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
+        let mut sangon_sanger_fn = SangerFilename::new(filename, Vendor::Sangon);
         let date = time::Date::from_calendar_date(2025, time::Month::June, 1)
             .expect("Failed to create date");
         sangon_sanger_fn.set_date(date).unwrap();
@@ -355,7 +350,7 @@ mod tests {
         let vendor_id = "34781340.B08";
         let template_name = "K528-1";
         let primer_name = "C1";
-        let ruibio_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Ruibio);
+        let ruibio_sanger_fn = SangerFilename::new(filename, Vendor::Ruibio);
         assert_eq!(ruibio_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(ruibio_sanger_fn.get_template_name(), template_name);
         assert_eq!(ruibio_sanger_fn.get_primer_name(), primer_name);
@@ -364,7 +359,7 @@ mod tests {
     #[test]
     fn test_ruibio_standardized_name() {
         let filename = "K528-1.C1.34781340.B08.ab1";
-        let mut ruibio_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Ruibio);
+        let mut ruibio_sanger_fn = SangerFilename::new(filename, Vendor::Ruibio);
         let date = time::Date::from_calendar_date(2025, time::Month::December, 6)
             .expect("Failed to create date");
         ruibio_sanger_fn.set_date(date).unwrap();
@@ -378,7 +373,7 @@ mod tests {
         let template_name = "TL1";
         let vendor_id = "A01";
         let primer_name = "T25";
-        let genewiz_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Genewiz);
+        let genewiz_sanger_fn = SangerFilename::new(filename, Vendor::Genewiz);
         assert_eq!(genewiz_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(genewiz_sanger_fn.get_template_name(), template_name);
         assert_eq!(genewiz_sanger_fn.get_primer_name(), primer_name);
@@ -390,7 +385,7 @@ mod tests {
         let template_name = "k1-2";
         let vendor_id = "G04";
         let primer_name = "C1_R";
-        let genewiz_sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Genewiz);
+        let genewiz_sanger_fn = SangerFilename::new(filename, Vendor::Genewiz);
         assert_eq!(genewiz_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(genewiz_sanger_fn.get_template_name(), template_name);
         assert_eq!(genewiz_sanger_fn.get_primer_name(), primer_name);
@@ -398,7 +393,7 @@ mod tests {
     #[test]
     fn test_vendor_switching() {
         let filename = "0001_31225060307072_(TXPCR)_[SP1].ab1";
-        let mut sanger_fn = SangerFilename::new(filename.to_string(), Vendor::Sangon);
+        let mut sanger_fn = SangerFilename::new(filename, Vendor::Sangon);
 
         // Test initial Sangon extraction
         assert_eq!(sanger_fn.get_vendor_name(), "Sangon");
@@ -424,18 +419,18 @@ mod tests {
     #[test]
     fn test_show_file_name() {
         let filename1 = "0001_31225060307072_(TXPCR)_[SP1].ab1";
-        let sanger_fn1 = SangerFilename::new(filename1.to_string(), Vendor::Sangon);
+        let sanger_fn1 = SangerFilename::new(filename1, Vendor::Sangon);
         assert_eq!(
             sanger_fn1.show_file_name(),
             "0001_31225060307072_(TXPCR)_[SP1].ab1"
         );
 
         let filename2 = "/path/to/file/K528-1.C1.34781340.B08.ab1";
-        let sanger_fn2 = SangerFilename::new(filename2.to_string(), Vendor::Ruibio);
+        let sanger_fn2 = SangerFilename::new(filename2, Vendor::Ruibio);
         assert_eq!(sanger_fn2.show_file_name(), "K528-1.C1.34781340.B08.ab1");
 
         let filename3 = "C:\\Users\\test\\TL1-T25_A01.ab1";
-        let sanger_fn3 = SangerFilename::new(filename3.to_string(), Vendor::Genewiz);
+        let sanger_fn3 = SangerFilename::new(filename3, Vendor::Genewiz);
         assert_eq!(sanger_fn3.show_file_name(), "TL1-T25_A01.ab1");
     }
 
@@ -447,7 +442,7 @@ mod tests {
         let full_path = temp_dir.join(filename);
         std::fs::write(&full_path, b"test content").expect("Failed to create test file");
         let mut sanger_fn =
-            SangerFilename::new(full_path.to_string_lossy().to_string(), Vendor::Sangon);
+            SangerFilename::new(full_path.to_string_lossy().as_ref(), Vendor::Sangon);
         let date = time::Date::from_calendar_date(2025, time::Month::June, 1)
             .expect("Failed to create date");
         sanger_fn.set_date(date).unwrap();
