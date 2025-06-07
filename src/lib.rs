@@ -13,6 +13,13 @@ pub trait SangerFilename {
     }
     fn get_template_name(&self) -> String;
     fn get_primer_name(&self) -> String;
+    fn set_primer_name(&mut self, primer_name: &str) -> anyhow::Result<()>;
+    fn set_template_name(&mut self, template_name: &str) -> anyhow::Result<()>;
+    fn set_date(&mut self, date: time::Date) -> anyhow::Result<()> {
+        let standardized_name = self.get_standardized_name(Some(date));
+        self.set_template_name(&standardized_name)?;
+        Ok(())
+    }
     fn get_vendor_id(&self) -> String;
     fn rename(&self, new_name: &str) -> Result<(), String>;
     fn get_vendor_name(&self) -> String;

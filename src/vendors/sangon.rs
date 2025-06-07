@@ -3,19 +3,32 @@ use crate::SangerFilename;
 #[derive(Clone, PartialEq, Debug)]
 pub struct SangonSangerFilename {
     filename: String,
+    primer_name: String,
+    template_name: String,
+    date: Option<time::Date>,
 }
 
 impl From<String> for SangonSangerFilename {
     fn from(filename: String) -> Self {
-        SangonSangerFilename { filename }
+        let mut fname = SangonSangerFilename {
+            filename,
+            primer_name: String::new(),
+            template_name: String::new(),
+            date: None,
+        };
+        fname
+            .set_primer_name(&fname.get_primer_name())
+            .expect("Failed to set primer name");
+        fname
+            .set_template_name(&fname.get_template_name())
+            .expect("Failed to set template name");
+        fname
     }
 }
 
 impl From<&str> for SangonSangerFilename {
     fn from(filename: &str) -> Self {
-        SangonSangerFilename {
-            filename: filename.to_string(),
-        }
+        SangonSangerFilename::from(filename.to_string())
     }
 }
 
@@ -46,6 +59,18 @@ impl SangerFilename for SangonSangerFilename {
             }
         }
         String::new()
+    }
+    fn set_primer_name(&mut self, primer_name: &str) -> anyhow::Result<()> {
+        self.primer_name = primer_name.to_string();
+        Ok(())
+    }
+    fn set_template_name(&mut self, template_name: &str) -> anyhow::Result<()> {
+        self.template_name = template_name.to_string();
+        Ok(())
+    }
+    fn set_date(&mut self, date: time::Date) -> anyhow::Result<()> {
+        self.date = Some(date);
+        Ok(())
     }
 
     fn get_vendor_id(&self) -> String {

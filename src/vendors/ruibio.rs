@@ -3,19 +3,32 @@ use crate::SangerFilename;
 #[derive(Clone, PartialEq, Debug)]
 pub struct RuibioSangerFilename {
     filename: String,
+    primer_name: String,
+    template_name: String,
+    date: Option<time::Date>,
 }
 
 impl From<String> for RuibioSangerFilename {
     fn from(filename: String) -> Self {
-        RuibioSangerFilename { filename }
+        let mut fname = RuibioSangerFilename {
+            filename,
+            primer_name: String::new(),
+            template_name: String::new(),
+            date: None,
+        };
+        fname
+            .set_primer_name(&fname.get_primer_name())
+            .expect("Failed to set primer name");
+        fname
+            .set_template_name(&fname.get_template_name())
+            .expect("Failed to set template name");
+        fname
     }
 }
 
 impl From<&str> for RuibioSangerFilename {
     fn from(filename: &str) -> Self {
-        RuibioSangerFilename {
-            filename: filename.to_string(),
-        }
+        RuibioSangerFilename::from(filename.to_string())
     }
 }
 
@@ -30,6 +43,18 @@ impl SangerFilename for RuibioSangerFilename {
             return self.filename[..first_dot].to_string();
         }
         String::new()
+    }
+    fn set_primer_name(&mut self, primer_name: &str) -> anyhow::Result<()> {
+        self.primer_name = primer_name.to_string();
+        Ok(())
+    }
+    fn set_template_name(&mut self, template_name: &str) -> anyhow::Result<()> {
+        self.template_name = template_name.to_string();
+        Ok(())
+    }
+    fn set_date(&mut self, date: time::Date) -> anyhow::Result<()> {
+        self.date = Some(date);
+        Ok(())
     }
 
     fn get_primer_name(&self) -> String {

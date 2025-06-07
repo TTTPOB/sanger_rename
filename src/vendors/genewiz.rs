@@ -3,19 +3,32 @@ use crate::SangerFilename;
 #[derive(Clone, PartialEq, Debug)]
 pub struct GenewizSangerFilename {
     filename: String,
+    primer_name: String,
+    template_name: String,
+    date: Option<time::Date>,
 }
 
 impl From<String> for GenewizSangerFilename {
     fn from(filename: String) -> Self {
-        GenewizSangerFilename { filename }
+        let mut fname = GenewizSangerFilename {
+            filename,
+            primer_name: String::new(),
+            template_name: String::new(),
+            date: None,
+        };
+        fname
+            .set_primer_name(&fname.get_primer_name())
+            .expect("Failed to set primer name");
+        fname
+            .set_template_name(&fname.get_template_name())
+            .expect("Failed to set template name");
+        fname
     }
 }
 
 impl From<&str> for GenewizSangerFilename {
     fn from(filename: &str) -> Self {
-        GenewizSangerFilename {
-            filename: filename.to_string(),
-        }
+        GenewizSangerFilename::from(filename.to_string())
     }
 }
 
@@ -35,6 +48,18 @@ impl SangerFilename for GenewizSangerFilename {
             }
         }
         String::new()
+    }
+    fn set_primer_name(&mut self, primer_name: &str) -> anyhow::Result<()> {
+        self.primer_name = primer_name.to_string();
+        Ok(())
+    }
+    fn set_template_name(&mut self, template_name: &str) -> anyhow::Result<()> {
+        self.template_name = template_name.to_string();
+        Ok(())
+    }
+    fn set_date(&mut self, date: time::Date) -> anyhow::Result<()> {
+        self.date = Some(date);
+        Ok(())
     }
     fn get_primer_name(&self) -> String {
         let filestem = self.get_file_stem();
