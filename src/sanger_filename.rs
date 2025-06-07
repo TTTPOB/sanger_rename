@@ -176,7 +176,7 @@ impl SangerFilename {
         );
 
         // Rename the file on disk
-        std::fs::rename(&self.get_full_path(), new_path)?;
+        std::fs::rename(self.get_full_path(), new_path)?;
         Ok(())
     }
 
@@ -463,7 +463,7 @@ mod tests {
         for entry in dir_content {
             let entry = entry.unwrap();
             // if ends with .ab1, print the file name
-            if entry.path().extension().map_or(false, |ext| ext == "ab1") {
+            if entry.path().extension().is_some_and(|ext| ext == "ab1") {
                 println!("File in temp dir: {}", entry.path().display());
             }
         }

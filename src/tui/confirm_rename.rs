@@ -1,13 +1,12 @@
-use crossterm::event::{KeyCode, KeyEvent, KeyEventKind, KeyModifiers, ModifierKeyCode};
+use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Layout, Margin, Rect},
-    style::{Color, Modifier, Style, Stylize},
+    layout::{Alignment, Constraint, Layout, Rect},
+    style::{Color, Style, Stylize},
     text::{Line, Text},
     widgets::{
         Block, Borders, Padding, Paragraph,
-        calendar::{CalendarEventStore, Monthly},
     },
 };
 use std::{io::Stdout, rc::Rc, sync::Mutex};

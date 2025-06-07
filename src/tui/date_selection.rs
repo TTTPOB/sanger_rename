@@ -4,11 +4,7 @@ use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout, Margin, Rect},
     style::{Color, Modifier, Style, Stylize},
-    text::{Line, Text},
-    widgets::{
-        Block, Borders, Paragraph,
-        calendar::{CalendarEventStore, Monthly},
-    },
+    widgets::calendar::{CalendarEventStore, Monthly},
 };
 use std::{io::Stdout, rc::Rc, sync::Mutex};
 use time::ext::NumericalDuration;

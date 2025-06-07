@@ -95,8 +95,8 @@ impl App {
         Ok(primer_names)
     }
     pub fn get_sanger_filenames(&self) -> Vec<SangerFilename> {
-        let v = self.sanger_fns.lock().unwrap().filenames.clone();
-        v
+        
+        self.sanger_fns.lock().unwrap().filenames.clone()
     }
     pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
         for filename in &self.str_fns.filenames {
@@ -352,8 +352,7 @@ mod tests {
         let converted = app.filenames_string_to_sanger();
         assert!(converted.is_ok());
         let sanger_fns = app.get_sanger_filenames();
-        let converted_filename = sanger_fns
-            .get(0)
+        let converted_filename = sanger_fns.first()
             .expect("Expected at least one converted filename");
         assert!(filenames.contains(&converted_filename.get_full_path()));
         assert_eq!(converted_filename.get_vendor_name(), "Ruibio");

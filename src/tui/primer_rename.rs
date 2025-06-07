@@ -3,7 +3,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Layout, Rect},
+    layout::{Alignment, Constraint, Layout},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Row, Table},
 };
@@ -150,15 +150,15 @@ impl PrimerRenameStage {
                         new_name.map_or("<not set>".to_string(), |n| n.clone())
                     };
                     let row_content = [name.clone(), "-->".to_string(), current_input_display];
-                    let row = Row::new(row_content).style(if is_highlighted {
+                    
+                    Row::new(row_content).style(if is_highlighted {
                         Style::default()
                             .bg(Color::DarkGray)
                             .fg(Color::Yellow)
                             .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default()
-                    });
-                    row
+                    })
                 })
                 .collect::<Vec<_>>();
 
