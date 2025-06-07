@@ -106,7 +106,7 @@ impl App {
     fn add_filename(&mut self, filename: String) {
         self.sanger_fns_str.filenames.push(filename);
     }
-    fn add_filenames(&mut self, filenames: Vec<String>) {
+    pub fn add_filenames(&mut self, filenames: Vec<String>) {
         self.sanger_fns_str.filenames.extend(filenames);
     }
     pub fn get_filenames(&self) -> &Vec<String> {
