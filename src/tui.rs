@@ -1,8 +1,8 @@
 use crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    Terminal,
+    Frame, Terminal,
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Layout},
+    layout::{Alignment, Constraint, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph, Row, Table},
@@ -319,35 +319,8 @@ impl PrimerRenameStage {
             let primer_rename_view = Table::new(left_rows, left_table_width)
                 .header(left_header)
                 .block(left_block);
-
-            let right_header = Row::new(["Original", "-->", "Standardized"])
-                .style(Style::default().add_modifier(Modifier::BOLD));
-            let mut rows = vec![];
-            for sf in self.sanger_fns.lock().unwrap().filenames.iter() {
-                let original_name = sf.show_file_name();
-                let extname = sf.get_extension_name();
-                let standardized_name = format!("{}.{}", sf.get_standardized_name(), extname);
-                rows.push(Row::new([
-                    original_name,
-                    "-->".to_string(),
-                    standardized_name,
-                ]));
-            }
-
-            let right_block = Block::default()
-                .borders(Borders::ALL)
-                .title("Rename Preview");
-            let right_table_width = [
-                Constraint::Percentage(45),
-                Constraint::Percentage(10),
-                Constraint::Percentage(45),
-            ];
-            let rename_preview_view = Table::new(rows, right_table_width)
-                .header(right_header)
-                .block(right_block);
-
             f.render_widget(primer_rename_view, chunks[0]);
-            f.render_widget(rename_preview_view, chunks[1]);
+            App::render_rename_preview_table(f, chunks[1], &self.sanger_fns);
         })?;
 
         Ok(())
@@ -531,6 +504,41 @@ impl App {
         terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     ) -> anyhow::Result<()> {
         self.date_selection.render(terminal)
+    }
+    fn render_rename_preview_table(
+        frame: &mut Frame,
+        area: Rect,
+        sanger_fns: &Rc<Mutex<SangerFilenames>>,
+    ) {
+        let block = Block::default()
+            .borders(Borders::ALL)
+            .title("Rename Preview")
+            .title_alignment(Alignment::Center)
+            .border_style(Style::default().fg(Color::Cyan));
+        let header = Row::new(["Original", "-->", "Standardized"])
+            .style(Style::default().add_modifier(Modifier::BOLD));
+
+        let mut rows = vec![];
+        for sf in sanger_fns.lock().unwrap().filenames.iter() {
+            let original_name = sf.show_file_name();
+            let extname = sf.get_extension_name();
+            let standardized_name = format!("{}.{}", sf.get_standardized_name(), extname);
+            rows.push(Row::new([
+                original_name,
+                "-->".to_string(),
+                standardized_name,
+            ]));
+        }
+
+        let table_width = [
+            Constraint::Percentage(45),
+            Constraint::Percentage(10),
+            Constraint::Percentage(45),
+        ];
+
+        let table = Table::new(rows, table_width).header(header).block(block);
+
+        frame.render_widget(table, area);
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
