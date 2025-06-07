@@ -158,7 +158,26 @@ impl App {
                     _ => {}
                 }
             }
-            StageTransition::Previous(stage) => self.stage = stage,
+            StageTransition::Previous(stage) => {
+                self.stage = stage;
+                match self.stage {
+                    Stage::VendorSelection => {
+                        self.vendor_selection = VendorSelectionStage::new();
+                    }
+                    Stage::PrimerRename => {
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.primer_rename = PrimerRenameStage::from_sanger_fns(sanger_fns);
+                    }
+                    Stage::TemplateRename => {
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.template_rename = TemplateRenameStage::from_sanger_fns(sanger_fns);
+                    }
+                    Stage::DateSelection => {
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.date_selection = DateSelectionStage::from_sanger_fns(sanger_fns);
+                    }
+                }
+            }
             StageTransition::Quit => self.should_quit = true,
         }
     }

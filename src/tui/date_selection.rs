@@ -72,7 +72,7 @@ impl DateSelectionStage {
             }
             KeyCode::Char('p') | KeyCode::BackTab => {
                 self.selected_date = self.prev_month(self.selected_date);
-                StageTransition::Stay
+                StageTransition::Previous(super::Stage::TemplateRename)
             }
             _ => StageTransition::Stay,
         }

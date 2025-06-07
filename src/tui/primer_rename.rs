@@ -121,7 +121,10 @@ impl PrimerRenameStage {
                     StageTransition::Stay
                 }
                 KeyCode::Esc | KeyCode::Char('q') => StageTransition::Quit,
-                KeyCode::Tab => StageTransition::Next(Stage::TemplateRename),
+                KeyCode::Tab | KeyCode::Char('n') => StageTransition::Next(Stage::TemplateRename),
+                KeyCode::BackTab | KeyCode::Char('p') => {
+                    StageTransition::Previous(Stage::VendorSelection)
+                }
                 _ => StageTransition::Stay,
             }
         }
