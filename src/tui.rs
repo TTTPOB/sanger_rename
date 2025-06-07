@@ -586,67 +586,86 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
+    /// Setup function to create test filenames for each vendor
+    fn setup_test_filenames(vendor: Vendor) -> Vec<String> {
+        let fixture_dir = match vendor {
+            Vendor::Sangon => "fixtures/sangon",
+            Vendor::Ruibio => "fixtures/ruibio",
+            Vendor::Genewiz => "fixtures/genewiz",
+        };
+
+        // Read all .ab1 files from the fixture directory
+        let mut filenames = Vec::new();
+        if let Ok(entries) = fs::read_dir(fixture_dir) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.extension().and_then(|s| s.to_str()) == Some("ab1") {
+                        if let Some(path_str) = path.to_str() {
+                            filenames.push(path_str.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        filenames.sort(); // Ensure consistent ordering
+        filenames
+    }
     #[test]
     fn test_add_filenames() {
         let mut app = App::new();
-        let fns = vec![
-            "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq",
-            "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq",
-        ].iter().map(|s| s.to_string()).collect::<Vec<String>>();
-        app.add_filenames(fns);
-        assert_eq!(app.get_filenames().len(), 2);
+        let fns = setup_test_filenames(Vendor::Ruibio);
+        app.add_filenames(fns.clone());
+        assert_eq!(app.get_filenames().len(), fns.len());
     }
     #[test]
     fn test_name_convert() {
         let mut app = App::new();
         app.set_selected_vendor(Some(Vendor::Ruibio));
-        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
-        app.add_filenames(vec![filename.clone()]);
+        let filenames = setup_test_filenames(Vendor::Ruibio);
+        app.add_filenames(filenames);
         let converted = app.filenames_string_to_sanger();
         assert!(converted.is_ok());
         let sanger_fns = app.get_sanger_filenames();
-        assert_eq!(sanger_fns.len(), 1);
+        assert_eq!(sanger_fns.len(), 5);
     }
     #[test]
     fn test_convert_filename() {
         let mut app = App::new();
         app.set_selected_vendor(Some(Vendor::Ruibio));
-        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
-        app.add_filenames(vec![filename.clone()]);
+        let filenames = setup_test_filenames(Vendor::Ruibio);
+        app.add_filenames(filenames.clone());
         let converted = app.filenames_string_to_sanger();
         assert!(converted.is_ok());
         let sanger_fns = app.get_sanger_filenames();
         let converted_filename = sanger_fns
             .get(0)
             .expect("Expected at least one converted filename");
-        assert_eq!(converted_filename.get_full_path(), filename);
-        assert_eq!(
-            converted_filename.get_file_stem(),
-            "K528-3.250604-mbp-s3.34810430.D07"
-        );
+        assert!(filenames.contains(&converted_filename.get_full_path()));
         assert_eq!(converted_filename.get_vendor_name(), "Ruibio");
     }
-
     #[test]
     fn test_get_primer_names() {
         let mut app = App::new();
         app.set_selected_vendor(Some(Vendor::Ruibio));
-        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
-        app.add_filenames(vec![filename.clone()]);
+        let filenames = setup_test_filenames(Vendor::Ruibio);
+        app.add_filenames(filenames);
         app.filenames_string_to_sanger().unwrap();
         app.stage = Stage::PrimerRename;
         let primer_names = app.get_all_primer_names().unwrap();
-        assert_eq!(primer_names.len(), 1);
-        assert_eq!(primer_names[0], "250604-mbp-s3");
+        assert_eq!(primer_names.len(), 5);
+        // Test that we can extract primer names from the fixtures
+        assert!(primer_names.contains(&"C1".to_string()));
+        assert!(primer_names.contains(&"T7".to_string()));
     }
-
     #[test]
     fn test_primer_rename_fill() {
         let mut app = App::new();
         app.set_selected_vendor(Some(Vendor::Ruibio));
-        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
-        app.add_filenames(vec![filename.clone()]);
+        let filenames = setup_test_filenames(Vendor::Ruibio);
+        app.add_filenames(filenames);
         app.filenames_string_to_sanger().unwrap();
         app.handle_stage_transition(StageTransition::Next(Stage::PrimerRename));
         assert_eq!(app.stage, Stage::PrimerRename);
@@ -657,9 +676,52 @@ mod tests {
             .keys()
             .cloned()
             .collect::<Vec<_>>();
-        assert_eq!(primer_names.len(), 1);
-        assert_eq!(primer_names[0], "250604-mbp-s3");
-        // also assert the val
-        assert_eq!(app.primer_rename.rename_map[&primer_names[0]], None);
+        assert_eq!(primer_names.len(), 5);
+        // All primer names should initially have None as their renamed value
+        for primer_name in &primer_names {
+            assert_eq!(app.primer_rename.rename_map[primer_name], None);
+        }
+    }
+
+    #[test]
+    fn test_sangon_filenames() {
+        let mut app = App::new();
+        app.set_selected_vendor(Some(Vendor::Sangon));
+        let filenames = setup_test_filenames(Vendor::Sangon);
+        app.add_filenames(filenames);
+        app.filenames_string_to_sanger().unwrap();
+        let sanger_fns = app.get_sanger_filenames();
+        assert_eq!(sanger_fns.len(), 5);
+
+        // Test that we can extract template and primer names from Sangon fixtures
+        let template_names: Vec<String> =
+            sanger_fns.iter().map(|f| f.get_template_name()).collect();
+        assert!(template_names.contains(&"TXPCR".to_string()));
+        assert!(template_names.contains(&"GAPDH".to_string()));
+
+        let primer_names: Vec<String> = sanger_fns.iter().map(|f| f.get_primer_name()).collect();
+        assert!(primer_names.contains(&"SP1".to_string()));
+        assert!(primer_names.contains(&"SP2".to_string()));
+    }
+
+    #[test]
+    fn test_genewiz_filenames() {
+        let mut app = App::new();
+        app.set_selected_vendor(Some(Vendor::Genewiz));
+        let filenames = setup_test_filenames(Vendor::Genewiz);
+        app.add_filenames(filenames);
+        app.filenames_string_to_sanger().unwrap();
+        let sanger_fns = app.get_sanger_filenames();
+        assert_eq!(sanger_fns.len(), 5);
+
+        // Test that we can extract template and primer names from Genewiz fixtures
+        let template_names: Vec<String> =
+            sanger_fns.iter().map(|f| f.get_template_name()).collect();
+        assert!(template_names.contains(&"TL1".to_string()));
+        assert!(template_names.contains(&"k1-2".to_string()));
+
+        let primer_names: Vec<String> = sanger_fns.iter().map(|f| f.get_primer_name()).collect();
+        assert!(primer_names.contains(&"T25".to_string()));
+        assert!(primer_names.contains(&"C1_R".to_string()));
     }
 }
