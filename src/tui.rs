@@ -48,6 +48,7 @@ struct VendorSelectionStage {
 }
 
 struct PrimerRenameStage {
+    sanger_fns: Rc<Mutex<SangerFilenames>>,
     rename_map: HashMap<String, Option<String>>,
 }
 
@@ -168,13 +169,23 @@ impl VendorSelectionStage {
 }
 
 impl PrimerRenameStage {
-    pub fn new() -> Self {
+    pub fn init() -> Self {
         Self {
             rename_map: HashMap::new(),
+            sanger_fns: Rc::new(Mutex::new(SangerFilenames {
+                filenames: Vec::new(),
+            })),
         }
     }
-    pub fn fill_names(&mut self, sanger_fns: &Vec<SangerFilename>) {
-        for sanger_fn in sanger_fns {
+    pub fn new(sanger_fns: Rc<Mutex<SangerFilenames>>) -> Self {
+        Self {
+            rename_map: HashMap::new(),
+            sanger_fns: sanger_fns.clone(),
+        }
+    }
+    pub fn fill_names(&mut self) {
+        let sanger_fns = self.sanger_fns.lock().unwrap();
+        for sanger_fn in sanger_fns.filenames.iter() {
             let primer_name = sanger_fn.get_primer_name();
             self.rename_map.insert(primer_name.clone(), None);
         }
@@ -278,7 +289,7 @@ impl Default for App {
                 filenames: Vec::new(),
             },
             vendor_selection: VendorSelectionStage::new(),
-            primer_rename: PrimerRenameStage::new(),
+            primer_rename: PrimerRenameStage::init(),
             date_selection: DateSelectionStage::new(),
             rename_preview: RenamePreviewStage::new(),
         }
@@ -354,7 +365,22 @@ impl App {
     fn handle_stage_transition(&mut self, transition: StageTransition) {
         match transition {
             StageTransition::Stay => {}
-            StageTransition::Next(stage) => self.stage = stage,
+            StageTransition::Next(stage) => {
+                self.stage = stage;
+                match self.stage {
+                    Stage::PrimerRename => {
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.primer_rename = PrimerRenameStage::new(sanger_fns);
+                    }
+                    Stage::DateSelection => {
+                        self.date_selection = DateSelectionStage::new();
+                    }
+                    Stage::RenamePreview => {
+                        self.rename_preview = RenamePreviewStage::new();
+                    }
+                    _ => {}
+                }
+            }
             StageTransition::Previous(stage) => self.stage = stage,
             StageTransition::Quit => self.should_quit = true,
         }
