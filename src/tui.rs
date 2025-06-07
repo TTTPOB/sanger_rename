@@ -212,6 +212,14 @@ impl PrimerRenameStage {
                         };
                         self.set_rename(primer_name.clone(), new_name);
                     }
+                    for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter_mut() {
+                        let old_primer_name = sanger_fn.get_primer_name();
+                        if let Some(new_name) = self.rename_map.get(&old_primer_name) {
+                            if let Some(new_name_str) = new_name {
+                                sanger_fn.set_primer_name(new_name_str).unwrap();
+                            }
+                        }
+                    }
                     self.editing = false;
                     self.current_input.clear();
                     StageTransition::Stay
@@ -252,14 +260,6 @@ impl PrimerRenameStage {
                     if let Some(primer_name) = primer_names.get(self.highlighted) {
                         if let Some(existing_name) = &self.rename_map[primer_name] {
                             self.current_input = existing_name.clone();
-                        }
-                    }
-                    for sanger_fn in self.sanger_fns.lock().unwrap().filenames.iter() {
-                        if let Some(primer_name) = self.rename_map.get(&sanger_fn.get_primer_name())
-                        {
-                            if primer_name.is_some() {
-                                self.current_input = primer_name.clone().unwrap_or_default();
-                            }
                         }
                     }
                     StageTransition::Stay
