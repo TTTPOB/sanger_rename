@@ -34,7 +34,7 @@ pub trait SangerFilename {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum SangerFilenameVaraint {
+pub enum SangerFilenameVariant {
     Sangon(SangonSangerFilename),
     Ruibio(RuibioSangerFilename),
     Genewiz(GenewizSangerFilename),

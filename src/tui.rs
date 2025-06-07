@@ -14,7 +14,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{self, Block, Borders, List, Paragraph},
 };
-use sanger_rename::SangerFilenameVaraint;
+use sanger_rename::SangerFilenameVariant;
 use std::io::Stdout;
 use std::time::Duration;
 use std::{fmt::Display, io};
@@ -76,7 +76,7 @@ enum Stage {
 }
 
 struct SangerFilenames {
-    filenames: Vec<SangerFilenameVaraint>,
+    filenames: Vec<SangerFilenameVariant>,
 }
 struct SangerFilenamesStr {
     filenames: Vec<String>,
