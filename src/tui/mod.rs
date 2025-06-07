@@ -66,7 +66,7 @@ impl Default for App {
             vendor_selection: VendorSelectionStage::new(),
             primer_rename: PrimerRenameStage::init(),
             template_rename: TemplateRenameStage::init(),
-            date_selection: DateSelectionStage::new(),
+            date_selection: DateSelectionStage::init(),
         }
     }
 }
@@ -152,7 +152,8 @@ impl App {
                         self.template_rename = TemplateRenameStage::from_sanger_fns(sanger_fns);
                     }
                     Stage::DateSelection => {
-                        self.date_selection = DateSelectionStage::new();
+                        let sanger_fns = Rc::clone(&self.sanger_fns);
+                        self.date_selection = DateSelectionStage::from_sanger_fns(sanger_fns);
                     }
                     _ => {}
                 }

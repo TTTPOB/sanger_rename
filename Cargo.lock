@@ -535,6 +535,7 @@ dependencies = [
  "lru",
  "paste",
  "strum 0.26.3",
+ "time",
  "unicode-segmentation",
  "unicode-truncate",
  "unicode-width 0.2.0",
