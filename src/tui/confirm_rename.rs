@@ -72,7 +72,7 @@ impl ConfirmRenameStage {
             .border_style(Style::default().fg(Color::Cyan))
             .padding(Padding::new(0, 0, area.height / 3, 0));
         let content = if self.renamed {
-            "Renaming completed successfully!"
+            "Renaming completed successfully! Press 'q' to exit."
         } else {
             "Press 'Enter' to confirm renaming"
         };
