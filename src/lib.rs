@@ -1,4 +1,3 @@
-use std::fmt::Display;
 
 use crate::vendors::{
     genewiz::GenewizSangerFilename, ruibio::RuibioSangerFilename, sangon::SangonSangerFilename,

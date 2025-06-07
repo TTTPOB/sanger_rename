@@ -1,26 +1,20 @@
-use crossterm::{
-    event::{
-        self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyEventKind,
-    },
-    execute,
-    style::Stylize,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
-};
+use crossterm::event::{
+        self, KeyCode, KeyEvent, KeyEventKind,
+    };
 use ratatui::{
-    Frame, Terminal,
+    Terminal,
     backend::CrosstermBackend,
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{self, Block, Borders, List, Paragraph},
+    widgets::{Block, Borders, Paragraph},
 };
 use sanger_rename::{
-    SangerFilename, SangerFilenameVariant, vendors::genewiz::GenewizSangerFilename,
+    SangerFilenameVariant, vendors::genewiz::GenewizSangerFilename,
     vendors::ruibio::RuibioSangerFilename, vendors::sangon::SangonSangerFilename,
 };
 use std::io::Stdout;
-use std::time::Duration;
-use std::{fmt::Display, io};
+use std::fmt::Display;
 use strum::{EnumIter, IntoEnumIterator};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
