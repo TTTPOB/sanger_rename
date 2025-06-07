@@ -498,4 +498,26 @@ mod tests {
         assert_eq!(primer_names.len(), 1);
         assert_eq!(primer_names[0], "250604-mbp-s3");
     }
+
+    #[test]
+    fn test_primer_rename_fill() {
+        let mut app = App::new();
+        app.set_selected_vendor(Some(Vendor::Ruibio));
+        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
+        app.add_filenames(vec![filename.clone()]);
+        app.filenames_string_to_sanger().unwrap();
+        app.handle_stage_transition(StageTransition::Next(Stage::PrimerRename));
+        assert_eq!(app.stage, Stage::PrimerRename);
+        app.primer_rename.fill_names();
+        let primer_names = app
+            .primer_rename
+            .rename_map
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        assert_eq!(primer_names.len(), 1);
+        assert_eq!(primer_names[0], "250604-mbp-s3");
+        // also assert the val
+        assert_eq!(app.primer_rename.rename_map[&primer_names[0]], None);
+    }
 }
