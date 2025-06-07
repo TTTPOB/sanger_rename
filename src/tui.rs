@@ -281,44 +281,46 @@ impl PrimerRenameStage {
             .split(f.area());
 
             // Left panel: Primer names with rename inputs
-            let left_items: Vec<Line> = primer_names
+            let left_rows = primer_names
                 .iter()
                 .enumerate()
                 .map(|(i, name)| {
                     let is_highlighted = i == self.highlighted;
                     let new_name = self.rename_map.get(name).and_then(|n| n.as_ref());
-
-                    let display_text = if self.editing && is_highlighted {
-                        format!("{} -> {}_", name, self.current_input)
-                    } else if let Some(new_name) = new_name {
-                        format!("{} -> {}", name, new_name)
+                    let current_input_display = if self.editing && is_highlighted {
+                        format!("{}_", self.current_input)
                     } else {
-                        format!("{} -> <not set>", name)
+                        new_name.map_or("<not set>".to_string(), |n| n.clone())
                     };
-
-                    let style = if is_highlighted {
+                    let row_content = [name.clone(), "-->".to_string(), current_input_display];
+                    let row = Row::new(row_content).style(if is_highlighted {
                         Style::default()
+                            .bg(Color::DarkGray)
                             .fg(Color::Yellow)
                             .add_modifier(Modifier::BOLD)
                     } else {
                         Style::default()
-                    };
-
-                    Line::from(vec![
-                        Span::styled(if is_highlighted { ">> " } else { "   " }, style),
-                        Span::styled(display_text, style),
-                    ])
+                    });
+                    row
                 })
-                .collect();
+                .collect::<Vec<_>>();
+
+            let left_table_width = [
+                Constraint::Percentage(45),
+                Constraint::Percentage(10),
+                Constraint::Percentage(45),
+            ];
 
             let left_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Primer Names (Enter to edit, Tab to continue)");
-            let primer_rename_view = Paragraph::new(left_items)
-                .block(left_block)
-                .wrap(ratatui::widgets::Wrap { trim: true });
+            let left_header = Row::new(["Primer Name", "-->", "New Name"])
+                .style(Style::default().add_modifier(Modifier::BOLD));
+            let primer_rename_view = Table::new(left_rows, left_table_width)
+                .header(left_header)
+                .block(left_block);
 
-            let header = Row::new(["Original", "-->", "Standardized"])
+            let right_header = Row::new(["Original", "-->", "Standardized"])
                 .style(Style::default().add_modifier(Modifier::BOLD));
             let mut rows = vec![];
             for sf in self.sanger_fns.lock().unwrap().filenames.iter() {
@@ -335,13 +337,13 @@ impl PrimerRenameStage {
             let right_block = Block::default()
                 .borders(Borders::ALL)
                 .title("Rename Preview");
-            let table_width = [
+            let right_table_width = [
                 Constraint::Percentage(45),
                 Constraint::Percentage(10),
                 Constraint::Percentage(45),
             ];
-            let rename_preview_view = Table::new(rows, table_width)
-                .header(header)
+            let rename_preview_view = Table::new(rows, right_table_width)
+                .header(right_header)
                 .block(right_block);
 
             f.render_widget(primer_rename_view, chunks[0]);
