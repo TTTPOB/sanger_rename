@@ -10,14 +10,6 @@ struct Args {
     /// List of filenames to process
     #[arg(value_name = "FILE")]
     filenames: Vec<String>,
-
-    /// Verbose output
-    #[arg(short, long)]
-    verbose: bool,
-
-    /// Interactive mode - show TUI for vendor selection
-    #[arg(short, long)]
-    interactive: bool,
 }
 
 fn main() -> anyhow::Result<()> {
