@@ -172,7 +172,9 @@ impl PrimerRenameStage {
 
             let left_block = Block::default()
                 .borders(Borders::ALL)
-                .title("Primer Names (Enter to edit, Tab to continue)");
+                .style(Style::default().fg(Color::Cyan))
+                .title("Primer Names (Enter to edit, Tab to continue)")
+                .title_alignment(Alignment::Center);
             let left_header = Row::new(["Primer Name", "-->", "New Name"])
                 .style(Style::default().add_modifier(Modifier::BOLD));
             let primer_rename_view = Table::new(left_rows, left_table_width)
