@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Alignment, Constraint, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Paragraph},
+    widgets::{Block, Borders, Padding, Paragraph},
 };
 use sanger_rename::Vendor;
 use std::io::Stdout;
@@ -111,6 +111,7 @@ impl VendorSelectionStage {
                 let block = Block::default()
                     .borders(Borders::ALL)
                     .title(Span::styled(title.clone(), style))
+                    .padding(Padding::new(0, 0, area.height / 3, 0))
                     .border_style(style);
                 let block_content = Paragraph::new(title.clone())
                     .style(style)
