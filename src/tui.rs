@@ -14,7 +14,10 @@ use ratatui::{
     text::{Line, Span},
     widgets::{self, Block, Borders, List, Paragraph},
 };
-use sanger_rename::SangerFilenameVariant;
+use sanger_rename::{
+    SangerFilename, SangerFilenameVariant, vendors::genewiz::GenewizSangerFilename,
+    vendors::ruibio::RuibioSangerFilename, vendors::sangon::SangonSangerFilename,
+};
 use std::io::Stdout;
 use std::time::Duration;
 use std::{fmt::Display, io};
@@ -111,6 +114,37 @@ impl App {
     }
     pub fn get_filenames(&self) -> &Vec<String> {
         &self.sanger_fns_str.filenames
+    }
+    pub fn get_sanger_filenames(&self) -> &Vec<SangerFilenameVariant> {
+        &self.sanger_fns.filenames
+    }
+    pub fn filenames_string_to_sanger(&mut self) -> anyhow::Result<()> {
+        for filename in &self.sanger_fns_str.filenames {
+            match self.vendor_selection_state.selected_vendor {
+                Some(VendorSelection::Sangon) => {
+                    let fns = SangonSangerFilename::from(filename.clone());
+                    self.sanger_fns
+                        .filenames
+                        .push(SangerFilenameVariant::Sangon(fns));
+                }
+                Some(VendorSelection::Ruibio) => {
+                    let fns = RuibioSangerFilename::from(filename.clone());
+                    self.sanger_fns
+                        .filenames
+                        .push(SangerFilenameVariant::Ruibio(fns));
+                }
+                Some(VendorSelection::Genewiz) => {
+                    let fns = GenewizSangerFilename::from(filename.clone());
+                    self.sanger_fns
+                        .filenames
+                        .push(SangerFilenameVariant::Genewiz(fns));
+                }
+                None => {
+                    return Err(anyhow::anyhow!("No vendor selected"));
+                }
+            }
+        }
+        Ok(())
     }
     pub fn get_selected_vendor(&self) -> Option<VendorSelection> {
         self.vendor_selection_state.selected_vendor
@@ -272,5 +306,31 @@ impl App {
         }
         ratatui::restore();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_convert_filename() {
+        let mut app = App::new();
+        app.set_selected_vendor(Some(VendorSelection::Ruibio));
+        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
+        app.add_filenames(vec![filename.clone()]);
+        let converted = app.filenames_string_to_sanger();
+        assert!(converted.is_ok());
+        let converted_filename = app
+            .get_sanger_filenames()
+            .get(0)
+            .expect("Expected at least one converted filename");
+        match converted_filename {
+            SangerFilenameVariant::Ruibio(r) => {
+                assert_eq!(r.get_full_path(), filename);
+                assert_eq!(r.get_file_stem(), "K528-3.250604-mbp-s3.34810430.D07");
+            }
+            _ => panic!("Expected RuibioSangerFilename variant"),
+        }
     }
 }
