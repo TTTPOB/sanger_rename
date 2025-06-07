@@ -7,6 +7,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
 };
+use sanger_rename::SangerFilename;
 use sanger_rename::{
     SangerFilenameVariant, vendors::genewiz::GenewizSangerFilename,
     vendors::ruibio::RuibioSangerFilename, vendors::sangon::SangonSangerFilename,
@@ -106,6 +107,26 @@ impl App {
     }
     pub fn get_filenames(&self) -> &Vec<String> {
         &self.str_fns.filenames
+    }
+    pub fn get_all_primer_names(&self) -> anyhow::Result<Vec<String>> {
+        if self.stage != Stage::PrimerRename {
+            return Err(anyhow::anyhow!("Not in primer rename stage"));
+        }
+        let mut primer_names = Vec::new();
+        for sangefile in self.sanger_fns.filenames.iter() {
+            match sangefile {
+                SangerFilenameVariant::Sangon(s) => {
+                    primer_names.push(s.get_primer_name());
+                }
+                SangerFilenameVariant::Ruibio(r) => {
+                    primer_names.push(r.get_primer_name());
+                }
+                SangerFilenameVariant::Genewiz(g) => {
+                    primer_names.push(g.get_primer_name());
+                }
+            }
+        }
+        Ok(primer_names)
     }
     pub fn get_sanger_filenames(&self) -> &Vec<SangerFilenameVariant> {
         &self.sanger_fns.filenames
@@ -336,5 +357,18 @@ mod tests {
             }
             _ => panic!("Expected RuibioSangerFilename variant"),
         }
+    }
+
+    #[test]
+    fn test_get_primer_names() {
+        let mut app = App::new();
+        app.set_selected_vendor(Some(VendorSelection::Ruibio));
+        let filename = "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq".to_string();
+        app.add_filenames(vec![filename.clone()]);
+        app.filenames_string_to_sanger().unwrap();
+        app.stage = Stage::PrimerRename;
+        let primer_names = app.get_all_primer_names().unwrap();
+        assert_eq!(primer_names.len(), 1);
+        assert_eq!(primer_names[0], "250604-mbp-s3");
     }
 }
