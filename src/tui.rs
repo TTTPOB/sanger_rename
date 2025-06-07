@@ -52,6 +52,7 @@ pub struct App {
     pub quit_without_selection: bool,
     pub stage: Stage,
     sangler_fns: SangerFilenames,
+    sanger_fns_str: SangerFilenamesStr,
 }
 struct VendorSelectionState {
     highlighted: usize,
@@ -77,6 +78,9 @@ enum Stage {
 struct SangerFilenames {
     filenames: Vec<SangerFilenameVaraint>,
 }
+struct SangerFilenamesStr {
+    filenames: Vec<String>,
+}
 
 impl Default for App {
     fn default() -> App {
@@ -88,6 +92,9 @@ impl Default for App {
             sangler_fns: SangerFilenames {
                 filenames: Vec::new(),
             },
+            sanger_fns_str: SangerFilenamesStr {
+                filenames: Vec::new(),
+            },
         }
     }
 }
@@ -96,8 +103,8 @@ impl App {
     pub fn new() -> App {
         App::default()
     }
-    fn add_filename(&mut self, filename: SangerFilenameVaraint) {
-        self.sangler_fns.filenames.push(filename);
+    fn add_filename(&mut self, filename: String) {
+        self.sanger_fns_str.filenames.push(filename);
     }
     pub fn get_selected_vendor(&self) -> Option<VendorSelection> {
         self.vendor_selection_state.selected_vendor
