@@ -1,6 +1,4 @@
-use crossterm::event::{
-        self, KeyCode, KeyEvent, KeyEventKind,
-    };
+use crossterm::event::{self, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
@@ -13,8 +11,8 @@ use sanger_rename::{
     SangerFilenameVariant, vendors::genewiz::GenewizSangerFilename,
     vendors::ruibio::RuibioSangerFilename, vendors::sangon::SangonSangerFilename,
 };
-use std::io::Stdout;
 use std::fmt::Display;
+use std::io::Stdout;
 use strum::{EnumIter, IntoEnumIterator};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, EnumIter)]
@@ -306,6 +304,18 @@ impl App {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sanger_rename::SangerFilename;
+
+    #[test]
+    fn test_add_filenames() {
+        let mut app = App::new();
+        let fns = vec![
+            "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq",
+            "C:\\Users\\username\\Downloads\\20250604150114670_RR7114\\报告成功\\K528-3.250604-mbp-s3.34810430.D07.seq",
+        ].iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        app.add_filenames(fns);
+        assert_eq!(app.get_filenames().len(), 2);
+    }
 
     #[test]
     fn test_convert_filename() {
