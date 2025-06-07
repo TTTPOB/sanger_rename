@@ -24,6 +24,7 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let mut app = App::new();
     app.run()?;
+    app.add_filenames(args.filenames);
     println!("Selected vendor: {:?}", app.get_selected_vendor());
     Ok(())
 }
