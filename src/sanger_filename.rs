@@ -263,42 +263,34 @@ impl SangerFilename {
             return format!("{}.{}", parts[parts.len() - 2], parts[parts.len() - 1]);
         }
         String::new()
-    }
-
-    // Genewiz-specific extraction methods
+    } // Genewiz-specific extraction methods
     fn extract_genewiz_template_name(&self) -> String {
         let filestem = self.get_file_stem();
-        // Extract template name from pattern like "TL1-T25_A01" or "k1-2-C1_R_G04"
-        // Find the last underscore to locate the vendor ID
-        if let Some(underscore_pos) = filestem.rfind('_') {
-            // Find the last dash before the underscore to separate template from primer
-            let before_underscore = &filestem[..underscore_pos];
-            if let Some(dash_pos) = before_underscore.rfind('-') {
-                return filestem[..dash_pos].to_string();
-            }
+        // Extract template name from pattern like "BETA-ACTIN_T7_F05" or "TL1_T25_A01"
+        // Template is everything before the first underscore
+        if let Some(underscore_pos) = filestem.find('_') {
+            return filestem[..underscore_pos].to_string();
         }
         String::new()
     }
 
     fn extract_genewiz_primer_name(&self) -> String {
         let filestem = self.get_file_stem();
-        // Extract primer name from pattern like "TL1-T25_A01" or "k1-2-C1_R_G04"
-        // Find the last underscore to locate the vendor ID
-        if let Some(underscore_pos) = filestem.rfind('_') {
-            // Find the last dash before the underscore to separate template from primer
-            let before_underscore = &filestem[..underscore_pos];
-            if let Some(dash_pos) = before_underscore.rfind('-') {
-                return filestem[dash_pos + 1..underscore_pos].to_string();
-            }
+        // Extract primer name from pattern like "BETA-ACTIN_T7_F05" or "TL1_T25_A01"
+        // Primer is between the first and second underscore
+        let parts: Vec<&str> = filestem.split('_').collect();
+        if parts.len() >= 2 {
+            return parts[1].to_string();
         }
         String::new()
     }
-
     fn extract_genewiz_vendor_id(&self) -> String {
         let filestem = self.get_file_stem();
-        // Extract vendor ID from pattern like "TL1-T25_A01" or "k1-2-C1_R_G04"
-        if let Some(underscore_pos) = filestem.rfind('_') {
-            return filestem[underscore_pos + 1..].to_string();
+        // Extract vendor ID from pattern like "BETA-ACTIN_T7_F05" or "TL1_T25_A01"
+        // Vendor ID is everything after the second underscore
+        let parts: Vec<&str> = filestem.split('_').collect();
+        if parts.len() >= 3 {
+            return parts[2].to_string();
         }
         String::new()
     }
@@ -366,10 +358,9 @@ mod tests {
         let standardized_name = ruibio_sanger_fn.get_standardized_name();
         assert_eq!(standardized_name, "251206.K528-1.C1");
     }
-
     #[test]
     fn test_genewiz_extraction() {
-        let filename = "TL1-T25_A01.ab1";
+        let filename = "TL1_T25_A01.ab1";
         let template_name = "TL1";
         let vendor_id = "A01";
         let primer_name = "T25";
@@ -381,10 +372,22 @@ mod tests {
 
     #[test]
     fn test_genewiz_extraction2() {
-        let filename = "k1-2-C1_R_G04.ab1";
+        let filename = "k1-2_C1-R_G04.ab1";
         let template_name = "k1-2";
         let vendor_id = "G04";
-        let primer_name = "C1_R";
+        let primer_name = "C1-R";
+        let genewiz_sanger_fn = SangerFilename::new(filename, Vendor::Genewiz);
+        assert_eq!(genewiz_sanger_fn.get_vendor_id(), vendor_id);
+        assert_eq!(genewiz_sanger_fn.get_template_name(), template_name);
+        assert_eq!(genewiz_sanger_fn.get_primer_name(), primer_name);
+    }
+
+    #[test]
+    fn test_genewiz_extraction3() {
+        let filename = "BETA-ACTIN_T7_F05.ab1";
+        let template_name = "BETA-ACTIN";
+        let vendor_id = "F05";
+        let primer_name = "T7";
         let genewiz_sanger_fn = SangerFilename::new(filename, Vendor::Genewiz);
         assert_eq!(genewiz_sanger_fn.get_vendor_id(), vendor_id);
         assert_eq!(genewiz_sanger_fn.get_template_name(), template_name);
@@ -428,10 +431,9 @@ mod tests {
         let filename2 = "/path/to/file/K528-1.C1.34781340.B08.ab1";
         let sanger_fn2 = SangerFilename::new(filename2, Vendor::Ruibio);
         assert_eq!(sanger_fn2.show_file_name(), "K528-1.C1.34781340.B08.ab1");
-
-        let filename3 = "C:\\Users\\test\\TL1-T25_A01.ab1";
+        let filename3 = "C:\\Users\\test\\TL1_T25_A01.ab1";
         let sanger_fn3 = SangerFilename::new(filename3, Vendor::Genewiz);
-        assert_eq!(sanger_fn3.show_file_name(), "TL1-T25_A01.ab1");
+        assert_eq!(sanger_fn3.show_file_name(), "TL1_T25_A01.ab1");
     }
 
     #[test]

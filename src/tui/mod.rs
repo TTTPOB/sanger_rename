@@ -400,7 +400,6 @@ mod tests {
         assert!(primer_names.contains(&"SP1".to_string()));
         assert!(primer_names.contains(&"SP2".to_string()));
     }
-
     #[test]
     fn test_genewiz_filenames() {
         let mut app = App::new();
@@ -409,15 +408,17 @@ mod tests {
         app.add_filenames(filenames);
         app.filenames_string_to_sanger().unwrap();
         let sanger_fns = app.get_sanger_filenames();
-        assert_eq!(sanger_fns.len(), 5);
+        assert_eq!(sanger_fns.len(), 6);
 
         // Test that we can extract template and primer names from Genewiz fixtures
         let template_names: Vec<String> =
             sanger_fns.iter().map(|f| f.get_template_name()).collect();
         assert!(template_names.contains(&"TL1".to_string()));
         assert!(template_names.contains(&"k1-2".to_string()));
+        assert!(template_names.contains(&"BETA-ACTIN".to_string()));
 
         let primer_names: Vec<String> = sanger_fns.iter().map(|f| f.get_primer_name()).collect();
         assert!(primer_names.contains(&"T25".to_string()));
+        assert!(primer_names.contains(&"T7".to_string()));
     }
 }
